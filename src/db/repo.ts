@@ -1,3 +1,4 @@
+import Dexie from 'dexie'
 import { db } from './db'
 import type { AreaKind, OutboxItem, Survey, SurveyArea, TableName } from './types'
 
@@ -22,7 +23,8 @@ export function onLocalChange(fn: () => void) {
   return () => listeners.delete(fn)
 }
 function notifyChange() {
-  queueMicrotask(() => listeners.forEach((fn) => fn()))
+  // 必須跳出目前的 Dexie transaction，否則監聽者讀其他資料表會出錯
+  Dexie.ignoreTransaction(() => setTimeout(() => listeners.forEach((fn) => fn()), 0))
 }
 
 export type SurveyInput = Pick<

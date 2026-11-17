@@ -25,7 +25,7 @@ create policy survey_photos_update on public.survey_photos
   );
 grant usage on schema public to authenticated;
 revoke all on public.profiles, public.teams, public.team_members,
-              public.surveys, public.survey_areas, public.survey_photos from anon;
+              public.surveys, public.survey_areas, public.survey_photos from anon, authenticated;
 grant select, update on public.profiles to authenticated;
 grant select on public.teams, public.team_members to authenticated;
 grant select, insert, update on public.surveys, public.survey_areas, public.survey_photos to authenticated;
