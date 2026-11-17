@@ -97,11 +97,8 @@ export function SurveyFormPage() {
           </section>
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-semibold tracking-wide text-slate-500">預計安裝產品</h2>
-            <Field label="產品">
-              <TextInput value={form.product ?? ''} onChange={set('product')} placeholder="例如：滾筒洗衣機" />
-            </Field>
             <Field label="產品型號">
-              <TextInput value={form.product_model ?? ''} onChange={set('product_model')} />
+              <TextInput value={form.product_model ?? ''} onChange={set('product_model')} placeholder="例如：WD-S19VDW" />
             </Field>
             <Field label="備註">
               <TextArea value={form.notes ?? ''} onChange={set('notes')} />

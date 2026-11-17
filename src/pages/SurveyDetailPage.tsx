@@ -82,7 +82,6 @@ export function SurveyDetailPage() {
             <Row label="聯絡電話" value={s.customer_phone} />
             <Row label="場勘日期" value={formatDate(s.survey_date)} />
             <Row label="客戶地址" value={s.customer_address} />
-            <Row label="安裝產品" value={s.product} />
             <Row label="產品型號" value={s.product_model} />
             <Row label="備註" value={s.notes} />
           </dl>

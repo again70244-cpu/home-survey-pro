@@ -35,7 +35,7 @@ export function HomePage() {
     const k = normalize(q)
     if (!surveys || !k) return surveys
     return surveys.filter((s) =>
-      [s.customer_name, s.customer_phone, s.customer_address, s.product, s.product_model].some((f) => normalize(f).includes(k)),
+      [s.customer_name, s.customer_phone, s.customer_address, s.product_model].some((f) => normalize(f).includes(k)),
     )
   }, [surveys, q])
 
@@ -55,7 +55,7 @@ export function HomePage() {
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{Icon.search}</span>
           <TextInput
             type="search"
-            placeholder="搜尋客戶姓名、電話、地址、產品"
+            placeholder="搜尋客戶姓名、電話、地址、型號"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="pl-11"
@@ -89,7 +89,7 @@ export function HomePage() {
                       <span className="shrink-0 text-sm text-slate-500">{formatDate(s.survey_date)}</span>
                     </div>
                     <div className="mt-0.5 truncate text-sm text-slate-600">
-                      {[s.product, s.product_model].filter(Boolean).join('・') || '未填產品'}
+                      {s.product_model || '未填產品型號'}
                     </div>
                     {s.customer_address && <div className="mt-0.5 truncate text-sm text-slate-400">{s.customer_address}</div>}
                     <div className="mt-2">

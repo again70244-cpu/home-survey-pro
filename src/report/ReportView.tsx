@@ -71,7 +71,6 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
           <InfoRow label="場勘日期" value={s.survey_date ? formatDate(s.survey_date) : null} />
           <InfoRow label="聯絡電話" value={s.customer_phone} />
           <InfoRow label="客戶地址" value={s.customer_address} />
-          <InfoRow label="預計安裝產品" value={s.product} />
           <InfoRow label="產品型號" value={s.product_model} />
         </div>
       )
