@@ -8,6 +8,7 @@ import { SurveyDetailPage } from './pages/SurveyDetailPage'
 import { ToastProvider } from './components/Toast'
 import { ConflictsPage } from './pages/ConflictsPage'
 import { AreaPage } from './pages/AreaPage'
+import { ReportPage } from './pages/ReportPage'
 import { useEffect } from 'react'
 import { startSync } from './sync/engine'
 
@@ -37,6 +38,7 @@ function AppRoutes() {
       <Route path="/survey/:id" element={<SurveyDetailPage />} />
       <Route path="/survey/:id/edit" element={<SurveyFormPage />} />
       <Route path="/survey/:id/area/:areaId" element={<AreaPage />} />
+      <Route path="/survey/:id/report" element={<ReportPage />} />
       <Route path="/conflicts" element={<ConflictsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

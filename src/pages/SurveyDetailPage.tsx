@@ -58,7 +58,7 @@ export function SurveyDetailPage() {
   }
 
   return (
-    <div className="min-h-dvh pb-10">
+    <div className="min-h-dvh pb-28">
       <TopBar
         title={s.customer_name || '場勘'}
         left={<IconButton label="返回" onClick={() => nav('/')}>{Icon.back}</IconButton>}
@@ -96,6 +96,13 @@ export function SurveyDetailPage() {
           刪除這筆場勘
         </Button>
       </main>
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur">
+        <div className="mx-auto max-w-2xl">
+          <Button className="h-14 w-full text-lg" onClick={() => nav(`/survey/${s.id}/report`)}>
+            產生場勘報告
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
