@@ -21,7 +21,7 @@ export default defineConfig({
         description: '家電現場尺寸測量、拍照與場勘報告',
         lang: 'zh-Hant-TW',
         theme_color: '#ffffff',
-        background_color: '#f5f6f8',
+        background_color: '#ffffff',
         display: 'standalone',
         start_url: base,
         scope: base,
@@ -37,6 +37,14 @@ export default defineConfig({
       workbox: {
         navigateFallback: `${base}index.html`,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Google 字型：第一次載入後快取，離線也能顯示同樣字體
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'google-fonts', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+        ],
       },
     }),
   ],

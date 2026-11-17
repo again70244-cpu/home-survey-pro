@@ -8,7 +8,7 @@ import { pwaStore, promptInstall } from '../lib/pwa'
 import { downloadBlob } from '../report/share'
 import { retrySync, syncNow } from '../sync/engine'
 import { useSyncState } from '../sync/useSync'
-import { Button, Card, ErrorBox, Icon, IconButton, InfoBox, TopBar } from '../components/ui'
+import { Button, Card, ErrorBox, Icon, IconButton, InfoBox, TopBar, PageTitle } from '../components/ui'
 import { useToast } from '../components/Toast'
 
 const stamp = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
@@ -70,28 +70,29 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-dvh pb-10">
-      <TopBar title="設定" left={<IconButton label="返回" onClick={() => nav('/')}>{Icon.back}</IconButton>} />
-      <main className="mx-auto max-w-2xl space-y-4 p-4">
+      <TopBar left={<IconButton label="返回" onClick={() => nav('/')}>{Icon.back}紀錄</IconButton>} />
+      <main className="mx-auto max-w-2xl space-y-4 px-6">
+        <PageTitle eyebrow="SETTINGS" title="設定" />
         <ErrorBox>{error}</ErrorBox>
         <InfoBox>{info}</InfoBox>
-        {busy && <div className="rounded-xl bg-brand-50 px-3.5 py-3 text-sm text-brand-700">{busy}</div>}
+        {busy && <div className="border-l-2 border-ink bg-sand px-3.5 py-3 text-sm text-ink">{busy}</div>}
 
         <Card>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500">帳號</h2>
-          <p className="mt-2 break-all text-base text-slate-900">{user?.email}</p>
+          <h2 className="text-xs font-medium tracking-[0.18em] text-sub">帳號</h2>
+          <p className="mt-1 break-all text-lg font-light text-ink">{user?.email}</p>
           {pwa.canInstall && !pwa.installed && (
             <Button className="mt-3 w-full" onClick={() => void promptInstall()}>安裝到主畫面</Button>
           )}
-          {pwa.installed && <p className="mt-2 text-sm text-emerald-700">✓ 已安裝為 App</p>}
+          {pwa.installed && <p className="mt-2 text-sm text-[#555]">✓ 已安裝為 App</p>}
         </Card>
 
         <Card>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500">同步狀態</h2>
+          <h2 className="text-xs font-medium tracking-[0.18em] text-sub">同步狀態</h2>
           <dl className="mt-2 space-y-1 text-sm">
-            <div className="flex justify-between"><dt className="text-slate-500">狀態</dt><dd className="font-medium">{{ idle: '正常', syncing: '同步中', offline: '離線（等待網路）', error: '同步失敗' }[sync.phase]}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">尚未同步</dt><dd className="font-medium">{sync.pending} 筆</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">衝突待處理</dt><dd className="font-medium">{sync.conflicts} 筆</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">最後同步</dt><dd className="font-medium">{sync.lastSyncedAt ? new Date(sync.lastSyncedAt).toLocaleString('zh-TW') : '—'}</dd></div>
+            <div className="flex justify-between"><dt className="text-sub">狀態</dt><dd className="font-medium">{{ idle: '正常', syncing: '同步中', offline: '離線（等待網路）', error: '同步失敗' }[sync.phase]}</dd></div>
+            <div className="flex justify-between"><dt className="text-sub">尚未同步</dt><dd className="font-medium">{sync.pending} 筆</dd></div>
+            <div className="flex justify-between"><dt className="text-sub">衝突待處理</dt><dd className="font-medium">{sync.conflicts} 筆</dd></div>
+            <div className="flex justify-between"><dt className="text-sub">最後同步</dt><dd className="font-medium">{sync.lastSyncedAt ? new Date(sync.lastSyncedAt).toLocaleString('zh-TW') : '—'}</dd></div>
             {sync.lastError && <div className="break-words text-red-600">錯誤：{sync.lastError}</div>}
           </dl>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -101,8 +102,8 @@ export function SettingsPage() {
         </Card>
 
         <Card>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500">資料備份</h2>
-          <p className="mt-1 text-sm text-slate-500">雲端同步之外的完整備份，建議定期保存一份到電腦或雲端硬碟。</p>
+          <h2 className="text-xs font-medium tracking-[0.18em] text-sub">資料備份</h2>
+          <p className="mt-1 text-sm text-sub">雲端同步之外的完整備份，建議定期保存一份到電腦或雲端硬碟。</p>
           <div className="mt-3 space-y-2">
             <Button className="w-full" disabled={!!busy} onClick={() => void onZip()}>匯出完整備份（ZIP，含原始照片）</Button>
             <Button variant="secondary" className="w-full" disabled={!!busy} onClick={() => void onJson()}>只匯出資料（JSON）</Button>
@@ -112,26 +113,26 @@ export function SettingsPage() {
         </Card>
 
         <Button variant="danger" className="w-full" onClick={() => void logout()}>登出</Button>
-        <p className="text-center text-xs text-slate-400">家電場勘助手 Pro・版本 {__APP_VERSION__}</p>
+        <p className="text-center text-xs text-sub">家電場勘助手 Pro・版本 {__APP_VERSION__}</p>
       </main>
 
       {plan && (
-        <div className="fixed inset-0 z-40 flex items-end bg-slate-900/40">
-          <div className="w-full rounded-t-3xl bg-white p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl" role="dialog" aria-label="確認還原">
-            <h3 className="text-lg font-semibold text-slate-900">確認從備份還原</h3>
-            <p className="mt-1 text-sm text-slate-500">備份時間：{new Date(plan.json.exportedAt).toLocaleString('zh-TW')}{plan.json.account?.email ? `・${plan.json.account.email}` : ''}</p>
+        <div className="fixed inset-0 z-40 flex items-end bg-black/30">
+          <div className="w-full bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6" role="dialog" aria-label="確認還原">
+            <h3 className="text-2xl font-light text-ink">確認從備份還原</h3>
+            <p className="mt-1 text-sm text-sub">備份時間：{new Date(plan.json.exportedAt).toLocaleString('zh-TW')}{plan.json.account?.email ? `・${plan.json.account.email}` : ''}</p>
             <div className="mt-4 grid grid-cols-3 gap-2 text-center">
               {([['場勘', plan.newSurveys.length, plan.skipped.surveys], ['區域', plan.newAreas.length, plan.skipped.areas], ['照片', plan.newPhotos.length, plan.skipped.photos]] as const).map(([l, n, sk]) => (
-                <div key={l} className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-xs text-slate-500">{l}</div>
-                  <div className="text-2xl font-bold text-slate-900">+{n}</div>
-                  <div className="text-xs text-slate-400">已存在 {sk}（略過）</div>
+                <div key={l} className="border-t border-ink pt-3">
+                  <div className="text-xs text-sub">{l}</div>
+                  <div className="text-3xl font-light text-ink">+{n}</div>
+                  <div className="text-xs text-sub">已存在 {sk}（略過）</div>
                 </div>
               ))}
             </div>
-            {plan.otherAccount && <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">此備份來自其他帳號，還原後資料會屬於目前登入的帳號。</p>}
+            {plan.otherAccount && <p className="mt-3 border-l-2 border-oak bg-sand p-3 text-sm text-ink">此備份來自其他帳號，還原後資料會屬於目前登入的帳號。</p>}
             {plan.photosWithoutFile > 0 && <p className="mt-3 text-sm text-amber-700">{plan.photosWithoutFile} 張照片在備份中沒有檔案（JSON 備份），將不會還原。</p>}
-            <p className="mt-3 text-sm text-slate-600">{nothingNew ? '備份中的資料都已存在，不需要還原。' : '已存在的資料不會被覆蓋，也不會重複建立。'}</p>
+            <p className="mt-3 text-sm text-[#555]">{nothingNew ? '備份中的資料都已存在，不需要還原。' : '已存在的資料不會被覆蓋，也不會重複建立。'}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={() => setPlan(null)}>取消</Button>
               <Button disabled={!!nothingNew || !!busy} onClick={() => void onRestore()}>確認還原</Button>

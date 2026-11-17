@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { db } from '../db/db'
 import { createSurvey, emptySurveyInput, updateSurvey, type SurveyInput } from '../db/repo'
 import { useUserId } from '../auth/AuthProvider'
-import { Button, ErrorBox, Field, Icon, IconButton, TextArea, TextInput, TopBar } from '../components/ui'
+import { Button, ErrorBox, Field, Icon, IconButton, TextArea, TextInput, TopBar, PageTitle } from '../components/ui'
 import { useToast } from '../components/Toast'
 
 const blankToNull = (v: string) => (v.trim() === '' ? null : v.trim())
@@ -73,15 +73,15 @@ export function SurveyFormPage() {
   return (
     <div className="min-h-dvh pb-28">
       <TopBar
-        title={isNew ? '新增場勘' : '編輯場勘'}
-        left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}</IconButton>}
+        left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}返回</IconButton>}
       />
       {!form ? (
-        <main className="mx-auto max-w-2xl p-4">{error ? <ErrorBox>{error}</ErrorBox> : <p className="text-slate-400">讀取中…</p>}</main>
+        <main className="mx-auto max-w-2xl px-6">{error ? <ErrorBox>{error}</ErrorBox> : <p className="text-sub">讀取中…</p>}</main>
       ) : (
-        <form id="survey-form" onSubmit={submit} className="mx-auto max-w-2xl space-y-4 p-4">
-          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold tracking-wide text-slate-500">客戶資料</h2>
+        <form id="survey-form" onSubmit={submit} className="mx-auto max-w-2xl px-6">
+          <PageTitle eyebrow={isNew ? 'NEW SURVEY' : 'EDIT SURVEY'} title={isNew ? '新增場勘' : '編輯場勘'} />
+          <section className="space-y-5 border-t border-ink py-6">
+            <h2 className="text-xs font-medium tracking-[0.18em] text-sub">客戶資料</h2>
             <Field label="客戶姓名">
               <TextInput required value={form.customer_name} onChange={set('customer_name')} placeholder="例如：王小明" />
             </Field>
@@ -95,8 +95,8 @@ export function SurveyFormPage() {
               <TextInput value={form.customer_address ?? ''} onChange={set('customer_address')} />
             </Field>
           </section>
-          <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-semibold tracking-wide text-slate-500">預計安裝產品</h2>
+          <section className="space-y-5 border-t border-line py-6">
+            <h2 className="text-xs font-medium tracking-[0.18em] text-sub">預計安裝產品</h2>
             <Field label="產品型號">
               <TextInput value={form.product_model ?? ''} onChange={set('product_model')} placeholder="例如：WD-S19VDW" />
             </Field>
@@ -108,9 +108,9 @@ export function SurveyFormPage() {
         </form>
       )}
       {form && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
           <div className="mx-auto max-w-2xl">
-            <Button type="submit" form="survey-form" disabled={busy} className="h-14 w-full text-lg">
+            <Button type="submit" form="survey-form" disabled={busy} className="h-14 w-full">
               {busy ? '儲存中…' : isNew ? '建立場勘' : '儲存修改'}
             </Button>
           </div>

@@ -4,7 +4,7 @@ import { toBlob } from 'html-to-image'
 import { db } from '../db/db'
 import { useUserId } from '../auth/AuthProvider'
 import { ensurePhotoBlob } from '../sync/engine'
-import { Button, ErrorBox, Icon, IconButton, TopBar } from '../components/ui'
+import { Button, ErrorBox, Icon, IconButton, TopBar, PageTitle } from '../components/ui'
 import { useToast } from '../components/Toast'
 import { buildBlocks, buildReportData, CONTENT_H, paginate, PAGE_H, PAGE_W, type Block, type ReportData } from '../report/model'
 import { BlockView, MeasureBox, ReportPage as PageView } from '../report/ReportView'
@@ -146,27 +146,28 @@ export function ReportPage() {
 
   return (
     <div className="min-h-dvh pb-36">
-      <TopBar title="場勘報告" left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}</IconButton>} />
-      <main className="mx-auto max-w-2xl space-y-4 p-4">
+      <TopBar left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}返回</IconButton>} />
+      <main className="mx-auto max-w-2xl space-y-4 px-6">
+        <PageTitle eyebrow="REPORT" title="場勘報告" />
         {stage.step === 'error' && <ErrorBox>產生報告失敗：{stage.msg}</ErrorBox>}
         {stage.step !== 'done' && stage.step !== 'error' && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
-            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-brand-100 border-t-brand-600" />
-            <div className="font-medium text-slate-800">
+          <div className="border-y border-line py-10 text-center">
+            <div className="mx-auto mb-4 h-7 w-7 animate-spin rounded-full border-2 border-line border-t-ink" />
+            <div className="text-lg font-light text-ink">
               {stage.step === 'loading' ? `準備照片 ${stage.done ?? 0}/${stage.total ?? 0}` : stage.step === 'measuring' ? '排版中…' : `產生圖片 ${(stage.done ?? 0) + 1}/${stage.total ?? '…'}`}
             </div>
-            <div className="mt-1 text-sm text-slate-500">請稍候，照片較多時需要較長時間</div>
+            <div className="mt-1 text-sm text-sub">請稍候，照片較多時需要較長時間</div>
           </div>
         )}
         {missingPhotos > 0 && <ErrorBox>有 {missingPhotos} 張照片目前無法取得（離線且尚未下載到這台裝置），報告中會以文字標示。</ErrorBox>}
         {stage.step === 'done' && (
           <>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-[#555]">
               已產生 <b>{files.length}</b> 張報告圖片（A4 直式，{PAGE_W * 2}×{PAGE_H * 2}）。
             </p>
             <ul className="space-y-3">
               {previews.map((u, i) => (
-                <li key={u} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <li key={u} className="border border-line bg-white">
                   <img src={u} alt={`第 ${i + 1} 頁`} className="w-full" />
                 </li>
               ))}
@@ -176,7 +177,7 @@ export function ReportPage() {
       </main>
 
       {stage.step === 'done' && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
           <div className="mx-auto max-w-2xl space-y-2">
             {shareSupported ? (
               <div className="grid grid-cols-2 gap-2">
@@ -184,7 +185,7 @@ export function ReportPage() {
                 <Button variant="secondary" className="h-14" onClick={() => void onShare()}>分享全部 {files.length} 張</Button>
               </div>
             ) : (
-              <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p className="bg-sand px-3 py-2 text-sm text-ink">
                 這個瀏覽器無法一次分享多張圖片。請「下載全部」或「下載 ZIP」後，到 LINE 選擇相簿中的圖片傳送。建議使用 Android Chrome。
               </p>
             )}
@@ -192,7 +193,7 @@ export function ReportPage() {
               <Button variant="secondary" onClick={() => void downloadAll(files)}>下載全部（{files.length} 張）</Button>
               <Button variant="secondary" onClick={() => void onZip()}>下載 ZIP</Button>
             </div>
-            {shareSupported && <p className="text-center text-xs text-slate-400">按「分享至 LINE」後，在分享選單中選擇 LINE，所有頁面會一次傳送</p>}
+            {shareSupported && <p className="text-center text-xs text-sub">按「分享至 LINE」後，在分享選單中選擇 LINE，所有頁面會一次傳送</p>}
           </div>
         </div>
       )}

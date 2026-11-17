@@ -6,16 +6,16 @@ import { useUserId } from '../auth/AuthProvider'
 import { formatDate } from '../lib/format'
 import { surveySummary } from '../lib/completeness'
 import { AreaList, CompletenessCard } from '../components/AreaList'
-import { Button, Card, Icon, IconButton, TopBar } from '../components/ui'
+import { BottomBar, Button, Card, Icon, IconButton, PageTitle, SectionLabel, TextButton, TopBar } from '../components/ui'
 import { RowSync } from '../components/SyncBadge'
 import { SyncStatusBar } from '../components/SyncStatusBar'
 import { useToast } from '../components/Toast'
 
 function Row({ label, value }: { label: string; value: string | null }) {
   return (
-    <div className="flex gap-3 py-2">
-      <dt className="w-20 shrink-0 text-sm text-slate-500">{label}</dt>
-      <dd className={`flex-1 break-words text-base ${value ? 'text-slate-900' : 'text-slate-400'}`}>{value || '未填寫'}</dd>
+    <div className="flex gap-4 border-b border-line py-3">
+      <dt className="w-20 shrink-0 text-[13px] text-sub">{label}</dt>
+      <dd className={`flex-1 whitespace-pre-wrap break-words text-[15px] ${value ? 'text-ink' : 'text-[#b5b5b5]'}`}>{value || '未填寫'}</dd>
     </div>
   )
 }
@@ -44,7 +44,7 @@ export function SurveyDetailPage() {
     return (
       <div className="min-h-dvh">
         <TopBar title="場勘" left={<IconButton label="返回" onClick={() => nav('/')}>{Icon.back}</IconButton>} />
-        <p className="p-8 text-center text-slate-500">這筆場勘不存在或已刪除</p>
+        <p className="p-8 text-center text-sub">這筆場勘不存在或已刪除</p>
       </div>
     )
 
@@ -57,27 +57,34 @@ export function SurveyDetailPage() {
     nav('/', { replace: true })
   }
 
+  const d = s.survey_date ? s.survey_date.slice(5).replace('-', '.') : ''
   return (
     <div className="min-h-dvh pb-28">
       <TopBar
-        title={s.customer_name || '場勘'}
-        left={<IconButton label="返回" onClick={() => nav('/')}>{Icon.back}</IconButton>}
-        right={
-          <IconButton label="編輯" onClick={() => nav(`/survey/${s.id}/edit`)}>
-            {Icon.edit}
-          </IconButton>
-        }
+        left={<IconButton label="返回" onClick={() => nav('/')}>{Icon.back}紀錄</IconButton>}
+        right={<TextButton onClick={() => nav(`/survey/${s.id}/edit`)} aria-label="編輯">編輯</TextButton>}
       />
-      <main className="mx-auto max-w-2xl space-y-4 p-4">
-        <SyncStatusBar />
+      <main className="mx-auto max-w-2xl px-6">
+        <PageTitle
+          eyebrow={`SITE SURVEY${d ? ` ・ ${d}` : ''}`}
+          title={s.customer_name || '（未填姓名）'}
+          meta={
+            <>
+              <span>{s.product_model || '未填型號'}</span>
+              <span>{sum.completeAreas} / {sum.areas.length} 區完成</span>
+              <SyncStatusBar compact />
+            </>
+          }
+        />
+        <div className="space-y-2 pb-4">
+          <SyncStatusBar alertsOnly />
+          {conflict && <p className="text-sm text-red-700">此場勘有版本衝突待處理</p>}
+        </div>
         <CompletenessCard sum={sum} />
         <AreaList surveyId={s.id} sum={sum} />
-        <Card>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-wide text-slate-500">場勘資料</h2>
-            <RowSync row={s} hasConflict={conflict} />
-          </div>
-          <dl className="divide-y divide-slate-100">
+        <Card className="mt-6">
+          <SectionLabel right={<RowSync row={s} hasConflict={conflict} />}>場勘資料</SectionLabel>
+          <dl className="border-t border-ink">
             <Row label="客戶姓名" value={s.customer_name} />
             <Row label="聯絡電話" value={s.customer_phone} />
             <Row label="場勘日期" value={formatDate(s.survey_date)} />
@@ -85,23 +92,21 @@ export function SurveyDetailPage() {
             <Row label="產品型號" value={s.product_model} />
             <Row label="備註" value={s.notes} />
           </dl>
-          <Link to={`/survey/${s.id}/edit`} className="mt-3 block">
-            <Button variant="secondary" className="w-full">{Icon.edit} 編輯場勘資料</Button>
+          <Link to={`/survey/${s.id}/edit`} className="mt-4 block">
+            <Button variant="secondary" className="w-full">編輯場勘資料</Button>
           </Link>
         </Card>
-
-
-        <Button variant="danger" className="w-full" onClick={onDelete}>
-          刪除這筆場勘
-        </Button>
-      </main>
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur">
-        <div className="mx-auto max-w-2xl">
-          <Button className="h-14 w-full text-lg" onClick={() => nav(`/survey/${s.id}/report`)}>
-            產生場勘報告
-          </Button>
+        <div className="pb-8">
+          <button onClick={onDelete} className="h-12 w-full text-sm text-red-700 underline underline-offset-4">
+            刪除這筆場勘
+          </button>
         </div>
-      </div>
+      </main>
+      <BottomBar>
+        <Button className="h-14 w-full" onClick={() => nav(`/survey/${s.id}/report`)}>
+          產生場勘報告
+        </Button>
+      </BottomBar>
     </div>
   )
 }

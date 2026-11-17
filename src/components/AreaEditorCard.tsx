@@ -102,9 +102,11 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
 
   const inputEvents = { onFocus: () => (focused.current = true), onBlur: () => { focused.current = false; void flush() } }
 
+  const DIM_EN: Record<DimKey, string> = { width_cm: 'WIDTH', depth_cm: 'DEPTH', height_cm: 'HEIGHT' }
+
   return (
-    <section id={`area-${a.id}`} className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-label={`區域 ${a.name}`}>
-      <div className="flex items-start gap-2">
+    <section id={`area-${a.id}`} className="scroll-mt-20 border-b border-line py-6" aria-label={`區域 ${a.name}`}>
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           {renaming ? (
             <input
@@ -116,43 +118,46 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
               }}
               onBlur={() => { setRenaming(false); void flush() }}
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="w-full rounded-lg border border-brand-500 px-2 py-1 text-lg font-bold focus:outline-none"
+              className="w-full border-0 border-b border-ink bg-transparent px-0 py-1 text-xl focus:outline-none focus:ring-0"
               aria-label="區域名稱"
             />
           ) : (
-            <h3 className="truncate text-lg font-bold text-slate-900">
-              <span className="mr-1.5 text-sm font-semibold text-slate-400">{String(index + 1).padStart(2, '0')}</span>
+            <h3 className="truncate text-xl font-normal text-ink">
+              <span className="mr-2.5 align-middle text-xs tabular-nums text-[#9a9a9a]">{String(index + 1).padStart(2, '0')}</span>
               {a.name}
-              <span className="ml-2 text-xs font-normal text-slate-400">{AREA_KIND_LABEL[a.kind]}</span>
+              <span className="ml-2 align-middle text-xs text-[#9a9a9a]">{AREA_KIND_LABEL[a.kind]}</span>
             </h3>
           )}
           <div className="mt-1.5"><AreaChips s={s} /></div>
         </div>
         {sorting ? (
           <div className="flex gap-1">
-            <button aria-label={`${a.name} 上移`} disabled={index === 0} onClick={() => void moveArea(a.survey_id, a.id, -1)} className="h-11 w-11 rounded-xl border border-slate-200 text-lg disabled:opacity-30 active:bg-slate-100">↑</button>
-            <button aria-label={`${a.name} 下移`} disabled={index === total - 1} onClick={() => void moveArea(a.survey_id, a.id, 1)} className="h-11 w-11 rounded-xl border border-slate-200 text-lg disabled:opacity-30 active:bg-slate-100">↓</button>
+            <button aria-label={`${a.name} 上移`} disabled={index === 0} onClick={() => void moveArea(a.survey_id, a.id, -1)} className="h-11 w-11 border border-ink text-lg disabled:border-line disabled:text-[#c4c4c4] active:bg-sand">↑</button>
+            <button aria-label={`${a.name} 下移`} disabled={index === total - 1} onClick={() => void moveArea(a.survey_id, a.id, 1)} className="h-11 w-11 border border-ink text-lg disabled:border-line disabled:text-[#c4c4c4] active:bg-sand">↓</button>
           </div>
         ) : (
-          <div className="flex shrink-0 gap-1 text-sm">
-            <button onClick={() => setRenaming(true)} className="rounded-lg px-2 py-2 text-slate-500 active:bg-slate-100" aria-label={`${a.name} 改名`}>改名</button>
-            <button onClick={() => void onDelete()} className="rounded-lg px-2 py-2 text-red-500 active:bg-red-50" aria-label={`刪除區域 ${a.name}`}>刪除</button>
+          <div className="flex shrink-0 text-[13px]">
+            <button onClick={() => setRenaming(true)} className="h-10 px-2 text-sub underline decoration-1 underline-offset-4 active:bg-sand" aria-label={`${a.name} 改名`}>改名</button>
+            <button onClick={() => void onDelete()} className="h-10 px-2 text-red-700 underline decoration-1 underline-offset-4 active:bg-red-50" aria-label={`刪除區域 ${a.name}`}>刪除</button>
           </div>
         )}
       </div>
 
       {!sorting && (
         <>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {DIMS.map((d) => {
+          <div className="mt-4 grid grid-cols-3 border-y border-ink">
+            {DIMS.map((d, k) => {
               const t = text[d.key]
               const empty = t.trim() === ''
               const err = errors[d.key]
               return (
-                <label key={d.key} className={`block rounded-xl border-2 px-2.5 py-2 focus-within:border-brand-500 ${err ? 'border-red-300' : empty ? 'border-dashed border-slate-300' : 'border-slate-300'}`}>
-                  <span className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-600">{d.label}</span>
-                    <span className={err ? 'text-red-600' : empty ? 'text-amber-600' : 'text-slate-400'}>{err ?? (empty ? '未測量' : 'cm')}</span>
+                <label
+                  key={d.key}
+                  className={`block py-2.5 focus-within:bg-sand ${k === 0 ? 'pr-2.5' : 'pl-2.5'} ${k < 2 ? 'border-r border-line' : ''} ${k === 1 ? 'pr-2.5' : ''} ${empty ? 'bg-sand' : ''}`}
+                >
+                  <span className="flex items-baseline justify-between text-[10px] tracking-[0.14em] text-sub">
+                    <span>{d.label} {DIM_EN[d.key]}</span>
+                    {err ? <span className="tracking-normal text-red-700">{err}</span> : !empty && <span className="tracking-normal">cm</span>}
                   </span>
                   <input
                     data-dim
@@ -169,7 +174,7 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
                       if (r.ok) setText((x) => ({ ...x, [d.key]: toText(r.value) })) // 全形數字等整理成標準格式
                       inputEvents.onBlur()
                     }}
-                    className="mt-0.5 w-full min-w-0 bg-transparent text-2xl font-bold tabular-nums text-slate-900 placeholder:text-slate-300 focus:outline-none"
+                    className="mt-0.5 w-full min-w-0 border-0 bg-transparent p-0 text-[30px] font-light tabular-nums text-ink placeholder:text-[#c9c9c9] focus:outline-none focus:ring-0"
                     aria-label={`${a.name} ${d.label}（公分）`}
                   />
                 </label>
@@ -177,27 +182,29 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
             })}
           </div>
 
-          <div className="mt-3">
+          <div className="mt-4">
             <PhotoSection areaId={a.id} bare />
           </div>
 
-          <label className="mt-3 block">
-            <span className="mb-1 block text-xs font-semibold text-slate-500">區域備註</span>
+          <label className="mt-2 block">
+            <span className="sr-only">區域備註</span>
             <textarea
-              rows={2}
+              rows={1}
               value={text.notes}
-              placeholder="例如：門框凸出 2cm、需拆門、轉角較窄…"
+              placeholder="＋ 區域備註（例如：門框凸出 2cm、需拆門）"
               onChange={(e) => {
                 setText((x) => ({ ...x, notes: e.target.value }))
                 queue({ notes: e.target.value.trim() || null })
+                e.target.style.height = 'auto'
+                e.target.style.height = `${e.target.scrollHeight}px`
               }}
               {...inputEvents}
-              className="block w-full rounded-xl border border-slate-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="block w-full resize-none border-0 border-b border-transparent bg-transparent px-0 py-2 text-[15px] text-ink focus:border-ink focus:outline-none focus:ring-0"
               aria-label={`${a.name} 區域備註`}
             />
           </label>
-          <div className="mt-1 h-4 text-right text-xs text-slate-400">
-            {saved === 'pending' ? '儲存中…' : saved === 'saved' ? '已儲存到本機' : saved === 'error' ? <span className="text-red-600">儲存失敗，請重試</span> : ''}
+          <div className="mt-1 h-4 text-right text-[11px] text-[#9a9a9a]">
+            {saved === 'pending' ? '儲存中…' : saved === 'saved' ? '已儲存到本機' : saved === 'error' ? <span className="text-red-700">儲存失敗，請重試</span> : ''}
           </div>
         </>
       )}

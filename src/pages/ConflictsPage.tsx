@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { useUserId } from '../auth/AuthProvider'
 import { COLUMNS, resolveConflict } from '../sync/engine'
-import { Button, Card, Icon, IconButton, TopBar } from '../components/ui'
+import { Button, Card, Icon, IconButton, TopBar, PageTitle } from '../components/ui'
 import { useToast } from '../components/Toast'
 import type { ConflictItem } from '../db/types'
 
@@ -35,22 +35,22 @@ function ConflictCard({ c }: { c: ConflictItem }) {
 
   return (
     <Card>
-      <div className="text-xs font-semibold tracking-wide text-slate-500">{TABLE_LABEL[c.table]}</div>
-      <div className="mt-0.5 text-lg font-semibold text-slate-900">{title || '（未命名）'}</div>
-      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
-        <div className="grid grid-cols-[5.5rem_1fr_1fr] bg-slate-50 text-xs font-semibold text-slate-500">
+      <div className="text-xs font-medium tracking-[0.18em] text-sub">{TABLE_LABEL[c.table]}</div>
+      <div className="mt-0.5 text-xl font-light text-ink">{title || '（未命名）'}</div>
+      <div className="mt-3 border-t border-ink">
+        <div className="grid grid-cols-[5.5rem_1fr_1fr] border-b border-line text-xs text-sub">
           <div className="px-2 py-2">欄位</div>
           <div className="px-2 py-2">此裝置<div className="font-normal">{when(c.local.updated_at)}</div></div>
           <div className="px-2 py-2">雲端（其他裝置）<div className="font-normal">{when(c.remote.updated_at)}</div></div>
         </div>
         {fields.map((f) => (
-          <div key={f} className="grid grid-cols-[5.5rem_1fr_1fr] border-t border-slate-100 text-sm">
-            <div className="px-2 py-2 text-slate-500">{FIELD_LABEL[f]}</div>
-            <div className="break-words px-2 py-2 text-slate-900">{show(f, c.local[f])}</div>
-            <div className="break-words px-2 py-2 text-slate-900">{show(f, c.remote[f])}</div>
+          <div key={f} className="grid grid-cols-[5.5rem_1fr_1fr] border-t border-line text-sm">
+            <div className="px-2 py-2 text-sub">{FIELD_LABEL[f]}</div>
+            <div className="break-words px-2 py-2 text-ink">{show(f, c.local[f])}</div>
+            <div className="break-words px-2 py-2 text-ink">{show(f, c.remote[f])}</div>
           </div>
         ))}
-        {fields.length === 0 && <div className="border-t border-slate-100 px-2 py-2 text-sm text-slate-500">內容相同（僅排序等欄位不同）</div>}
+        {fields.length === 0 && <div className="border-t border-line px-2 py-2 text-sm text-sub">內容相同（僅排序等欄位不同）</div>}
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button variant="secondary" onClick={() => void choose('local')}>採用此裝置</Button>
@@ -67,10 +67,11 @@ export function ConflictsPage() {
 
   return (
     <div className="min-h-dvh pb-10">
-      <TopBar title="版本衝突" left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}</IconButton>} />
-      <main className="mx-auto max-w-2xl space-y-4 p-4">
-        <p className="text-sm text-slate-500">以下資料在這台裝置與其他裝置都被修改過。系統沒有自動覆蓋任何一邊，請逐筆選擇要保留的版本。</p>
-        {list?.length === 0 && <p className="py-10 text-center text-slate-500">沒有待處理的衝突 👍</p>}
+      <TopBar left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}返回</IconButton>} />
+      <main className="mx-auto max-w-2xl space-y-4 px-6">
+        <PageTitle eyebrow="SYNC CONFLICTS" title="版本衝突" />
+        <p className="text-sm text-sub">以下資料在這台裝置與其他裝置都被修改過。系統沒有自動覆蓋任何一邊，請逐筆選擇要保留的版本。</p>
+        {list?.length === 0 && <p className="py-10 text-center text-sub">沒有待處理的衝突 👍</p>}
         {list?.map((c) => <ConflictCard key={c.key} c={c} />)}
       </main>
     </div>

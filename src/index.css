@@ -1,17 +1,58 @@
 @import "tailwindcss";
 
+/*
+ * 白樺（Birch）北歐極簡主題
+ * 純白底、黑色字、細線分隔、木質米色點綴；方角、無陰影
+ * 以覆寫色票的方式套用到全部元件：brand → 墨黑、amber → 木質色（待補）、emerald → 深灰（完成）
+ */
 @theme {
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-sans: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+
+  --color-ink: #111111;
+  --color-sub: #6e6e6e;
+  --color-line: #ececec;
+  --color-oak: #7a5a36;
+  --color-sand: #faf7f2;
+  --color-sand-2: #efe9df;
+
+  --color-brand-50: #faf7f2;
+  --color-brand-100: #efe9df;
+  --color-brand-500: #111111;
+  --color-brand-600: #111111;
+  --color-brand-700: #000000;
+
+  --color-amber-50: #faf7f2;
+  --color-amber-100: #f3ede3;
+  --color-amber-200: #e6ded1;
+  --color-amber-300: #d9cdb9;
+  --color-amber-500: #7a5a36;
+  --color-amber-600: #7a5a36;
+  --color-amber-700: #6a4d2e;
+  --color-amber-800: #5e4529;
+
+  --color-emerald-50: #f5f5f5;
+  --color-emerald-200: #dedede;
+  --color-emerald-500: #333333;
+  --color-emerald-600: #333333;
+  --color-emerald-700: #222222;
+  --color-emerald-800: #1a1a1a;
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+
+  --shadow-sm: none;
+  --shadow-md: none;
 }
 
 html, body, #root { min-height: 100%; }
 body {
-  @apply bg-slate-100 text-slate-800 antialiased;
+  @apply bg-white text-ink antialiased;
   -webkit-tap-highlight-color: transparent;
+  font-feature-settings: "tnum" 1;
 }
 input, textarea, select { font-size: 16px; } /* 避免 iOS 聚焦時自動放大 */
+::placeholder { color: #b5b5b5; }

@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { isSupabaseConfigured } from './lib/supabase'
 import { ForgotPasswordPage, LoginPage, ResetPasswordPage, SetupNeededPage, SignupPage } from './pages/AuthPages'
@@ -14,12 +14,21 @@ import { SettingsPage } from './pages/SettingsPage'
 import { useEffect } from 'react'
 import { startSync } from './sync/engine'
 
+/** 換頁時回到頁面頂端 */
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 function AppRoutes() {
   const { loading, session, recovery } = useAuth()
   const userId = session?.user.id
   useEffect(() => (userId ? startSync(userId) : undefined), [userId])
   if (loading)
-    return <div className="flex min-h-dvh items-center justify-center text-slate-400">載入中…</div>
+    return <div className="flex min-h-dvh items-center justify-center text-sub">載入中…</div>
 
   if (recovery) return <ResetPasswordPage />
 
@@ -55,6 +64,7 @@ export default function App() {
       <ToastProvider>
         <UpdateBanner />
         <HashRouter>
+          <ScrollToTop />
           <AppRoutes />
         </HashRouter>
       </ToastProvider>

@@ -6,7 +6,7 @@ import type { SurveyPhoto } from '../db/types'
 import { compressImage } from '../lib/image'
 import { ensurePhotoBlob, retrySync } from '../sync/engine'
 import { useSyncState } from '../sync/useSync'
-import { Card } from './ui'
+import { Card, Icon } from './ui'
 import { useToast } from './Toast'
 
 /** 照片顯示網址：本機優先，沒有才從雲端下載 */
@@ -33,11 +33,11 @@ export function usePhotoUrl(photoId: string | undefined) {
 
 function PhotoStatus({ p }: { p: SurveyPhoto }) {
   const { phase } = useSyncState()
-  if (p._syncError) return <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white">上傳失敗</span>
-  if (p._blobState === 'pending')
-    return <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-medium text-white">{phase === 'offline' ? '等待網路上傳' : phase === 'syncing' ? '上傳中…' : '待上傳'}</span>
-  if (p._dirty) return <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-medium text-white">尚未同步</span>
-  return <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white">已上傳</span>
+  const tag = (cls: string, t: string) => <span className={`block px-1.5 py-0.5 text-[11px] text-white ${cls}`}>{t}</span>
+  if (p._syncError) return tag('bg-red-700', '上傳失敗')
+  if (p._blobState === 'pending') return tag('bg-oak', phase === 'offline' ? '等待網路上傳' : phase === 'syncing' ? '上傳中…' : '待上傳')
+  if (p._dirty) return tag('bg-oak', '尚未同步')
+  return tag('bg-ink/70', '已上傳')
 }
 
 function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number; total: number; onOpen: () => void }) {
@@ -53,17 +53,17 @@ function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number;
     if (v !== (p.caption ?? null)) void updatePhotoCaption(p.id, v)
   }
   return (
-    <li className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <button type="button" onClick={onOpen} className="relative block aspect-[4/3] w-full bg-slate-100" aria-label={`檢視照片 ${index + 1}`}>
+    <li className="bg-white">
+      <button type="button" onClick={onOpen} className="relative block aspect-[4/3] w-full bg-sand-2" aria-label={`檢視照片 ${index + 1}`}>
         {url ? (
           <img src={url} alt={p.caption ?? `照片 ${index + 1}`} className="h-full w-full object-contain" />
         ) : (
-          <span className="flex h-full items-center justify-center text-xs text-slate-400">{missing ? '離線中，照片尚未下載' : '載入中…'}</span>
+          <span className="flex h-full items-center justify-center text-xs text-sub">{missing ? '離線中，照片尚未下載' : '載入中…'}</span>
         )}
-        <span className="absolute left-1.5 top-1.5"><PhotoStatus p={p} /></span>
-        <span className="absolute right-1.5 top-1.5 rounded-full bg-slate-900/60 px-2 py-0.5 text-xs text-white">{index + 1}</span>
+        <span className="absolute bottom-0 left-0"><PhotoStatus p={p} /></span>
+        <span className="absolute right-0 top-0 bg-ink px-2 py-0.5 text-[11px] tabular-nums text-white">{String(index + 1).padStart(2, '0')}</span>
       </button>
-      <div className="space-y-1.5 p-2">
+      <div className="pt-1">
         <input
           value={caption}
           placeholder="照片說明"
@@ -71,18 +71,18 @@ function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number;
           onChange={(e) => setCaption(e.target.value)}
           onBlur={save}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+          className="w-full border-0 border-b border-line bg-transparent px-0 py-1.5 text-sm focus:border-ink focus:outline-none focus:ring-0"
           aria-label={`照片 ${index + 1} 說明`}
         />
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
-            <button type="button" disabled={index === 0} onClick={() => void movePhoto(p.area_id, p.id, -1)} className="h-9 w-9 rounded-lg border border-slate-200 disabled:opacity-30 active:bg-slate-100" aria-label={`照片 ${index + 1} 往前`}>←</button>
-            <button type="button" disabled={index === total - 1} onClick={() => void movePhoto(p.area_id, p.id, 1)} className="h-9 w-9 rounded-lg border border-slate-200 disabled:opacity-30 active:bg-slate-100" aria-label={`照片 ${index + 1} 往後`}>→</button>
+            <button type="button" disabled={index === 0} onClick={() => void movePhoto(p.area_id, p.id, -1)} className="h-9 w-9 text-ink disabled:text-[#c9c9c9] active:bg-sand" aria-label={`照片 ${index + 1} 往前`}>←</button>
+            <button type="button" disabled={index === total - 1} onClick={() => void movePhoto(p.area_id, p.id, 1)} className="h-9 w-9 text-ink disabled:text-[#c9c9c9] active:bg-sand" aria-label={`照片 ${index + 1} 往後`}>→</button>
           </div>
           <button
             type="button"
             onClick={() => confirm('確定刪除這張照片？') && void deletePhoto(p.id)}
-            className="h-9 rounded-lg px-2 text-sm text-red-600 active:bg-red-50"
+            className="h-9 px-1 text-[13px] text-red-700 underline decoration-1 underline-offset-4 active:bg-red-50"
             aria-label={`刪除照片 ${index + 1}`}
           >
             刪除
@@ -148,33 +148,34 @@ export function PhotoSection({ areaId, bare = false }: { areaId: string; bare?: 
   }
 
   const Wrap = bare ? 'div' : Card
+  const btn = 'flex h-12 items-center justify-center gap-2 text-[15px] disabled:opacity-40'
   return (
     <Wrap>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-500">現場照片 {photos?.length ? `（${photos.length}）` : ''}</h2>
+      <div className="mb-2.5 flex items-baseline justify-between">
+        <h2 className="text-[11px] tracking-[0.16em] text-sub">現場照片{photos?.length ? `（${photos.length}）` : ''}</h2>
         {failed && (
-          <button onClick={() => void retrySync()} className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 ring-1 ring-red-200">
+          <button onClick={() => void retrySync()} className="text-sm text-red-700 underline decoration-1 underline-offset-4">
             重新上傳
           </button>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <button type="button" disabled={!!busy} onClick={() => camRef.current?.click()} className={`flex ${bare ? 'h-14 flex-row' : 'h-20 flex-col'} items-center justify-center gap-1 rounded-2xl bg-brand-600 text-base font-semibold text-white active:bg-brand-700 disabled:opacity-50`}>
-          <span className="text-2xl">📷</span>拍照
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" disabled={!!busy} onClick={() => camRef.current?.click()} className={`${btn} bg-ink text-white active:bg-black`}>
+          {Icon.camera}拍照
         </button>
-        <button type="button" disabled={!!busy} onClick={() => galRef.current?.click()} className={`flex ${bare ? 'h-14 flex-row' : 'h-20 flex-col'} items-center justify-center gap-1 rounded-2xl border-2 border-brand-600 text-base font-semibold text-brand-700 active:bg-brand-50 disabled:opacity-50`}>
-          <span className="text-2xl">🖼️</span>從相簿選取
+        <button type="button" disabled={!!busy} onClick={() => galRef.current?.click()} className={`${btn} border border-ink text-ink active:bg-sand`}>
+          {Icon.image}從相簿選取
         </button>
       </div>
       <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void onFiles(e.target.files); e.target.value = '' }} data-testid="camera-input" />
       <input ref={galRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void onFiles(e.target.files); e.target.value = '' }} data-testid="gallery-input" />
-      {busy && <p className="mt-3 text-sm text-brand-700">處理照片中… {busy.done}/{busy.total}</p>}
+      {busy && <p className="mt-3 text-sm text-sub">處理照片中… {busy.done}/{busy.total}</p>}
       {photos && photos.length > 0 ? (
-        <ul className="mt-3 grid grid-cols-2 gap-3">
+        <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-4">
           {photos.map((p, i) => <PhotoCard key={p.id} p={p} index={i} total={photos.length} onOpen={() => setView(i)} />)}
         </ul>
       ) : (
-        <p className="mt-3 rounded-xl border border-dashed border-amber-300 bg-amber-50 py-4 text-center text-sm text-amber-700">尚未拍照</p>
+        <p className="mt-3 bg-sand py-4 text-center text-sm text-oak">尚未拍照</p>
       )}
       {view !== null && photos && <Viewer photos={photos} start={view} onClose={() => setView(null)} />}
     </Wrap>
