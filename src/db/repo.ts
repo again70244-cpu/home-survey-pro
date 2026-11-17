@@ -132,3 +132,74 @@ export function emptySurveyInput(): SurveyInput {
     notes: null,
   }
 }
+
+// ---------------------------------------------------------------------------
+// 區域管理
+// ---------------------------------------------------------------------------
+export type AreaPatch = Partial<Pick<SurveyArea, 'name' | 'width_cm' | 'depth_cm' | 'height_cm' | 'notes'>>
+
+/** 「其他」區域的常用名稱 */
+export const OTHER_AREA_PRESETS = ['大門', '玄關', '走廊', '轉角', '安裝位置']
+
+async function liveAreas(surveyId: string) {
+  return (await db.survey_areas.where('survey_id').equals(surveyId).toArray())
+    .filter((a) => !a.deleted_at)
+    .sort((a, b) => a.sort_order - b.sort_order)
+}
+
+export async function addArea(surveyId: string, kind: AreaKind, name: string): Promise<string> {
+  let newId = ''
+  await db.transaction('rw', db.surveys, db.survey_areas, db.outbox, async () => {
+    const s = await db.surveys.get(surveyId)
+    if (!s) throw new Error('找不到這筆場勘')
+    const areas = await liveAreas(surveyId)
+    const sort = areas.length ? areas[areas.length - 1].sort_order + 1 : 0
+    const a = newArea(s.user_id, surveyId, kind, name.trim() || '自訂區域', sort)
+    newId = a.id
+    await db.survey_areas.add(a)
+    await enqueue('survey_areas', a.id, s.user_id)
+  })
+  return newId
+}
+
+export async function updateArea(id: string, patch: AreaPatch): Promise<void> {
+  await db.transaction('rw', db.survey_areas, db.outbox, async () => {
+    const a = await db.survey_areas.get(id)
+    if (!a) throw new Error('找不到這個區域')
+    await db.survey_areas.put({ ...a, ...patch, updated_at: nowIso(), _dirty: 1 })
+    await enqueue('survey_areas', id, a.user_id)
+  })
+}
+
+/** 軟刪除區域與其照片 */
+export async function deleteArea(id: string): Promise<void> {
+  const t = nowIso()
+  await db.transaction('rw', db.survey_areas, db.survey_photos, db.outbox, async () => {
+    const a = await db.survey_areas.get(id)
+    if (!a || a.deleted_at) return
+    await db.survey_areas.put({ ...a, deleted_at: t, updated_at: t, _dirty: 1 })
+    await enqueue('survey_areas', id, a.user_id)
+    for (const p of await db.survey_photos.where('area_id').equals(id).toArray()) {
+      if (p.deleted_at) continue
+      await db.survey_photos.put({ ...p, deleted_at: t, updated_at: t, _dirty: 1 })
+      await enqueue('survey_photos', p.id, p.user_id)
+    }
+  })
+}
+
+/** 上移 / 下移一格；重新編號並只同步有變動的區域 */
+export async function moveArea(surveyId: string, id: string, dir: -1 | 1): Promise<void> {
+  await db.transaction('rw', db.survey_areas, db.outbox, async () => {
+    const areas = await liveAreas(surveyId)
+    const i = areas.findIndex((a) => a.id === id)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= areas.length) return
+    ;[areas[i], areas[j]] = [areas[j], areas[i]]
+    const t = nowIso()
+    for (let k = 0; k < areas.length; k++) {
+      if (areas[k].sort_order === k) continue
+      await db.survey_areas.put({ ...areas[k], sort_order: k, updated_at: t, _dirty: 1 })
+      await enqueue('survey_areas', areas[k].id, areas[k].user_id)
+    }
+  })
+}

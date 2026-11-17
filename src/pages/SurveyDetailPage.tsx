@@ -3,7 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { deleteSurvey } from '../db/repo'
 import { useUserId } from '../auth/AuthProvider'
-import { formatCm, formatDate } from '../lib/format'
+import { formatDate } from '../lib/format'
+import { surveySummary } from '../lib/completeness'
+import { AreaList, CompletenessCard } from '../components/AreaList'
 import { Button, Card, Icon, IconButton, TopBar } from '../components/ui'
 import { RowSync } from '../components/SyncBadge'
 import { SyncStatusBar } from '../components/SyncStatusBar'
@@ -33,7 +35,8 @@ export function SurveyDetailPage() {
     const conflict = (await db.conflicts.where('userId').equals(userId).toArray()).some(
       (c) => c.rowId === survey.id || c.local.survey_id === survey.id,
     )
-    return { survey, areas, conflict }
+    const photos = await db.survey_photos.where('survey_id').equals(id!).toArray()
+    return { survey, areas, conflict, sum: surveySummary(areas, photos, !!survey._dirty) }
   }, [id, userId])
 
   if (data === undefined) return null
@@ -45,7 +48,7 @@ export function SurveyDetailPage() {
       </div>
     )
 
-  const { survey: s, areas, conflict } = data
+  const { survey: s, conflict, sum } = data
 
   async function onDelete() {
     if (!confirm(`確定要刪除「${s.customer_name}」的場勘紀錄？\n所有區域與照片都會一起刪除，其他裝置同步後也會刪除。`)) return
@@ -67,6 +70,8 @@ export function SurveyDetailPage() {
       />
       <main className="mx-auto max-w-2xl space-y-4 p-4">
         <SyncStatusBar />
+        <CompletenessCard sum={sum} />
+        <AreaList surveyId={s.id} sum={sum} />
         <Card>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold tracking-wide text-slate-500">場勘資料</h2>
@@ -86,27 +91,6 @@ export function SurveyDetailPage() {
           </Link>
         </Card>
 
-        <Card>
-          <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-500">場勘區域</h2>
-          <p className="mb-3 text-xs text-slate-400">尺寸輸入、拍照與區域管理將在第三、四階段開放</p>
-          <ul className="divide-y divide-slate-100">
-            {areas.map((a) => (
-              <li key={a.id} className="py-3">
-                <div className="font-medium text-slate-900">{a.name}</div>
-                <div className="mt-1 grid grid-cols-3 gap-2 text-sm">
-                  {(['寬', '深', '高'] as const).map((l, i) => {
-                    const v = [a.width_cm, a.depth_cm, a.height_cm][i]
-                    return (
-                      <div key={l} className={v === null ? 'text-slate-400' : 'text-slate-800'}>
-                        {l} {formatCm(v)}
-                      </div>
-                    )
-                  })}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Card>
 
         <Button variant="danger" className="w-full" onClick={onDelete}>
           刪除這筆場勘
