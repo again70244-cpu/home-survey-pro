@@ -9,6 +9,8 @@ import { Button, Card, Icon, IconButton, TextArea, TextInput, TopBar } from '../
 import { RowSync } from '../components/SyncBadge'
 import { useToast } from '../components/Toast'
 import { dimState } from '../lib/completeness'
+import { PhotoSection } from '../components/PhotoSection'
+import { SyncStatusBar } from '../components/SyncStatusBar'
 
 type DimKey = 'width_cm' | 'depth_cm' | 'height_cm'
 const DIMS: { key: DimKey; label: string; hint: string }[] = [
@@ -184,6 +186,7 @@ function AreaEditor() {
         left={<IconButton label="返回" onClick={() => go(`/survey/${surveyId}`)}>{Icon.back}</IconButton>}
       />
       <main className="mx-auto max-w-2xl space-y-4 p-4">
+        <SyncStatusBar />
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-500">
             {AREA_KIND_LABEL[a.kind]}・第 {idx + 1} / {siblings.length} 區
@@ -204,6 +207,8 @@ function AreaEditor() {
             {state === 'complete' ? '✓ 三項尺寸已完成' : '留空代表尚未測量，報告會標示「尚未測量」，不會當成 0'}
           </p>
         </section>
+
+        <PhotoSection areaId={a.id} />
 
         <Card className="space-y-4">
           <label className="block">
@@ -229,10 +234,6 @@ function AreaEditor() {
           </label>
         </Card>
 
-        <Card>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500">現場照片</h2>
-          <p className="mt-2 text-sm text-slate-400">拍照與上傳將在第四階段開放</p>
-        </Card>
 
         <Button variant="danger" className="w-full" onClick={() => void onDelete()}>
           刪除這個區域

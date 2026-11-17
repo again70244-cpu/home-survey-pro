@@ -203,3 +203,77 @@ export async function moveArea(surveyId: string, id: string, dir: -1 | 1): Promi
     }
   })
 }
+
+// ---------------------------------------------------------------------------
+// 照片
+// ---------------------------------------------------------------------------
+export async function addPhoto(areaId: string, img: { blob: Blob; width: number; height: number }): Promise<string> {
+  const id = uuid()
+  await db.transaction('rw', db.survey_areas, db.survey_photos, db.photoBlobs, db.outbox, async () => {
+    const a = await db.survey_areas.get(areaId)
+    if (!a) throw new Error('找不到這個區域')
+    const siblings = (await db.survey_photos.where('area_id').equals(areaId).toArray()).filter((p) => !p.deleted_at)
+    const t = nowIso()
+    // 先存照片本體，再存資料列：兩者在同一個 transaction，成功才算「已儲存」
+    await db.photoBlobs.put({ id, blob: img.blob })
+    await db.survey_photos.add({
+      id,
+      survey_id: a.survey_id,
+      area_id: areaId,
+      user_id: a.user_id,
+      storage_path: `${a.user_id}/${a.survey_id}/${id}.jpg`,
+      caption: null,
+      sort_order: siblings.length ? Math.max(...siblings.map((p) => p.sort_order)) + 1 : 0,
+      width: img.width,
+      height: img.height,
+      size_bytes: img.blob.size,
+      mime_type: 'image/jpeg',
+      revision: 0,
+      created_at: t,
+      updated_at: t,
+      deleted_at: null,
+      _dirty: 1,
+      _baseRevision: 0,
+      _blobState: 'pending',
+    })
+    await enqueue('survey_photos', id, a.user_id)
+  })
+  return id
+}
+
+export async function updatePhotoCaption(id: string, caption: string | null): Promise<void> {
+  await db.transaction('rw', db.survey_photos, db.outbox, async () => {
+    const p = await db.survey_photos.get(id)
+    if (!p) return
+    await db.survey_photos.put({ ...p, caption, updated_at: nowIso(), _dirty: 1 })
+    await enqueue('survey_photos', id, p.user_id)
+  })
+}
+
+export async function deletePhoto(id: string): Promise<void> {
+  await db.transaction('rw', db.survey_photos, db.outbox, async () => {
+    const p = await db.survey_photos.get(id)
+    if (!p || p.deleted_at) return
+    const t = nowIso()
+    await db.survey_photos.put({ ...p, deleted_at: t, updated_at: t, _dirty: 1 })
+    await enqueue('survey_photos', id, p.user_id)
+  })
+}
+
+export async function movePhoto(areaId: string, id: string, dir: -1 | 1): Promise<void> {
+  await db.transaction('rw', db.survey_photos, db.outbox, async () => {
+    const list = (await db.survey_photos.where('area_id').equals(areaId).toArray())
+      .filter((p) => !p.deleted_at)
+      .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at))
+    const i = list.findIndex((p) => p.id === id)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= list.length) return
+    ;[list[i], list[j]] = [list[j], list[i]]
+    const t = nowIso()
+    for (let k = 0; k < list.length; k++) {
+      if (list[k].sort_order === k) continue
+      await db.survey_photos.put({ ...list[k], sort_order: k, updated_at: t, _dirty: 1 })
+      await enqueue('survey_photos', list[k].id, list[k].user_id)
+    }
+  })
+}

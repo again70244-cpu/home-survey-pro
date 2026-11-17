@@ -23,6 +23,9 @@ const COMPARE_IGNORE = new Set(['id', 'user_id'])
 const TABLE_ORDER: TableName[] = ['surveys', 'survey_areas', 'survey_photos']
 const PULL_OVERLAP_MS = 2 * 60 * 1000
 const PAGE = 500
+export const BUCKET = 'survey-photos'
+/** 最近幾天內更新過的場勘，照片會在背景下載到本機（離線可看） */
+const PREFETCH_DAYS = 14
 
 export type SyncPhase = 'idle' | 'syncing' | 'offline' | 'error'
 export interface SyncState {
@@ -114,8 +117,23 @@ async function pushOne(item: OutboxItem): Promise<void> {
   }
   if (await db.conflicts.get(item.key)) return // 等待使用者處理衝突
 
-  // 照片：檔案上傳完成前不送出資料列（第四階段實作上傳）
-  if (item.table === 'survey_photos' && local._blobState === 'pending') return
+  if (item.table === 'survey_photos') {
+    // 從未上傳就被刪除：雲端沒有這筆，不需要送出
+    if (local.deleted_at && local._baseRevision === 0) {
+      await db.outbox.delete(item.key)
+      await t.update(item.rowId, { _dirty: 0, _syncError: null })
+      return
+    }
+    // 先上傳照片檔案，成功後才送出資料列；本機檔案保留不刪除
+    if (!local.deleted_at && local._blobState === 'pending') {
+      const b = await db.photoBlobs.get(item.rowId)
+      if (!b) throw new Error('本機找不到這張照片的檔案')
+      const { error } = await sb.storage.from(BUCKET).upload(local.storage_path as string, b.blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' })
+      if (error) throw error
+      await t.update(item.rowId, { _blobState: 'uploaded' })
+      local._blobState = 'uploaded'
+    }
+  }
 
   const snapshotUpdatedAt = local.updated_at
   const payload = pick(local, item.table)
@@ -143,6 +161,11 @@ async function pushOne(item: OutboxItem): Promise<void> {
       await t.update(item.rowId, { _syncError: null })
       return
     }
+  }
+
+  // 照片已確認刪除：移除雲端檔案（失敗不影響，下次可再清）
+  if (item.table === 'survey_photos' && remote!.deleted_at) {
+    await sb.storage.from(BUCKET).remove([remote!.storage_path as string]).catch(() => {})
   }
 
   // 成功：若送出期間本機又被修改，保留 dirty 讓下一輪再送
@@ -231,6 +254,43 @@ async function pull(userId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// 照片下載（雲端 → 本機快取）
+// ---------------------------------------------------------------------------
+const downloading = new Map<string, Promise<Blob | null>>()
+
+/** 取得照片檔案：本機有就用本機，沒有就從雲端下載並快取 */
+export function ensurePhotoBlob(photoId: string): Promise<Blob | null> {
+  const existing = downloading.get(photoId)
+  if (existing) return existing
+  const job = (async () => {
+    const local = await db.photoBlobs.get(photoId)
+    if (local) return local.blob
+    const p = await db.survey_photos.get(photoId)
+    if (!p || !supabase || !navigator.onLine) return null
+    const { data, error } = await supabase.storage.from(BUCKET).download(p.storage_path)
+    if (error || !data) return null
+    await db.transaction('rw', db.photoBlobs, db.survey_photos, async () => {
+      await db.photoBlobs.put({ id: photoId, blob: data })
+      const cur = await db.survey_photos.get(photoId)
+      if (cur && cur._blobState === 'remote-only') await db.survey_photos.update(photoId, { _blobState: 'uploaded' })
+    })
+    return data
+  })().finally(() => downloading.delete(photoId))
+  downloading.set(photoId, job)
+  return job
+}
+
+async function prefetchPhotos(userId: string) {
+  const since = new Date(Date.now() - PREFETCH_DAYS * 86400000).toISOString()
+  const recent = new Set((await db.surveys.where('user_id').equals(userId).toArray()).filter((s) => !s.deleted_at && s.updated_at >= since).map((s) => s.id))
+  const todo = (await db.survey_photos.where('_blobState').equals('remote-only').toArray()).filter((p) => p.user_id === userId && !p.deleted_at && recent.has(p.survey_id))
+  for (const p of todo) {
+    if (!navigator.onLine || currentUser !== userId) return
+    await ensurePhotoBlob(p.id)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 排程
 // ---------------------------------------------------------------------------
 let currentUser: string | null = null
@@ -270,6 +330,7 @@ export async function syncNow(): Promise<void> {
         // pull 可能解除了衝突前提，再送一次剩下的
         await refreshCounts()
         setState({ phase: failures ? 'error' : 'idle', lastSyncedAt: Date.now(), ...(failures ? {} : { lastError: null }) })
+        void prefetchPhotos(userId)
       } catch (err) {
         if (err instanceof NetworkDown || isNetworkError(err)) setState({ phase: 'offline', lastError: null })
         else setState({ phase: 'error', lastError: errText(err) })
