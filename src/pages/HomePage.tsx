@@ -6,7 +6,8 @@ import { useAuth, useUserId } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import { formatDate, normalize } from '../lib/format'
 import { Icon, IconButton, TextInput, TopBar } from '../components/ui'
-import { SyncBadge, rowSyncState } from '../components/SyncBadge'
+import { RowSync } from '../components/SyncBadge'
+import { SyncStatusBar } from '../components/SyncStatusBar'
 
 export function HomePage() {
   const userId = useUserId()
@@ -25,6 +26,11 @@ export function HomePage() {
         .then((rows) =>
           rows.sort((a, b) => (b.survey_date ?? '').localeCompare(a.survey_date ?? '') || b.updated_at.localeCompare(a.updated_at)),
         ),
+    [userId],
+  )
+
+  const conflictIds = useLiveQuery(
+    () => db.conflicts.where('userId').equals(userId).toArray().then((cs) => new Set(cs.map((c) => (c.table === 'surveys' ? c.rowId : (c.local.survey_id as string))))),
     [userId],
   )
 
@@ -64,7 +70,8 @@ export function HomePage() {
         </div>
       )}
 
-      <main className="mx-auto max-w-2xl space-y-3 px-4 pt-4">
+      <main className="mx-auto max-w-2xl space-y-3 px-4 pt-3">
+        <SyncStatusBar />
         <div className="relative">
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">{Icon.search}</span>
           <TextInput
@@ -107,7 +114,7 @@ export function HomePage() {
                     </div>
                     {s.customer_address && <div className="mt-0.5 truncate text-sm text-slate-400">{s.customer_address}</div>}
                     <div className="mt-2">
-                      <SyncBadge state={rowSyncState(s)} />
+                      <RowSync row={s} hasConflict={conflictIds?.has(s.id)} />
                     </div>
                   </div>
                   <span className="text-slate-300">{Icon.chevron}</span>

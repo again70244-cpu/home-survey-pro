@@ -5,7 +5,8 @@ import { deleteSurvey } from '../db/repo'
 import { useUserId } from '../auth/AuthProvider'
 import { formatCm, formatDate } from '../lib/format'
 import { Button, Card, Icon, IconButton, TopBar } from '../components/ui'
-import { SyncBadge, rowSyncState } from '../components/SyncBadge'
+import { RowSync } from '../components/SyncBadge'
+import { SyncStatusBar } from '../components/SyncStatusBar'
 import { useToast } from '../components/Toast'
 
 function Row({ label, value }: { label: string; value: string | null }) {
@@ -29,7 +30,10 @@ export function SurveyDetailPage() {
     const areas = (await db.survey_areas.where('survey_id').equals(id!).toArray())
       .filter((a) => !a.deleted_at)
       .sort((a, b) => a.sort_order - b.sort_order)
-    return { survey, areas }
+    const conflict = (await db.conflicts.where('userId').equals(userId).toArray()).some(
+      (c) => c.rowId === survey.id || c.local.survey_id === survey.id,
+    )
+    return { survey, areas, conflict }
   }, [id, userId])
 
   if (data === undefined) return null
@@ -41,7 +45,7 @@ export function SurveyDetailPage() {
       </div>
     )
 
-  const { survey: s, areas } = data
+  const { survey: s, areas, conflict } = data
 
   async function onDelete() {
     if (!confirm(`確定要刪除「${s.customer_name}」的場勘紀錄？\n所有區域與照片都會一起刪除，其他裝置同步後也會刪除。`)) return
@@ -62,10 +66,11 @@ export function SurveyDetailPage() {
         }
       />
       <main className="mx-auto max-w-2xl space-y-4 p-4">
+        <SyncStatusBar />
         <Card>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold tracking-wide text-slate-500">場勘資料</h2>
-            <SyncBadge state={rowSyncState(s)} />
+            <RowSync row={s} hasConflict={conflict} />
           </div>
           <dl className="divide-y divide-slate-100">
             <Row label="客戶姓名" value={s.customer_name} />
