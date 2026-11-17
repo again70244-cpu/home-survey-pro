@@ -1,0 +1,35 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
+
+// GitHub Pages 部署在 /<repo>/ 之下；用 BASE_PATH 環境變數設定
+const base = process.env.BASE_PATH ?? '/'
+
+export default defineConfig({
+  base,
+  plugins: [
+    react(),
+    tailwindcss(),
+    VitePWA({
+      registerType: 'prompt',
+      includeAssets: ['icon.svg'],
+      manifest: {
+        name: '家電場勘助手 Pro',
+        short_name: '場勘助手',
+        description: '家電現場尺寸測量、拍照與場勘報告',
+        lang: 'zh-Hant-TW',
+        theme_color: '#ffffff',
+        background_color: '#f5f6f8',
+        display: 'standalone',
+        start_url: base,
+        scope: base,
+        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+      },
+      workbox: {
+        navigateFallback: `${base}index.html`,
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+      },
+    }),
+  ],
+})
