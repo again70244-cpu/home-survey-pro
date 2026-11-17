@@ -266,6 +266,8 @@ create policy survey_photos_update on public.survey_photos
   );
 
 -- 資料表權限：匿名角色完全不能存取
+-- （明確授權，即使建立專案時關閉「預設授權給 Data API」也能正常運作）
+grant usage on schema public to authenticated;
 revoke all on public.profiles, public.teams, public.team_members,
               public.surveys, public.survey_areas, public.survey_photos from anon;
 grant select, update on public.profiles to authenticated;
