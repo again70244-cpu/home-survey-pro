@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { addArea, moveArea, OTHER_AREA_PRESETS } from '../db/repo'
+import { addArea, OTHER_AREA_PRESETS } from '../db/repo'
 import type { AreaKind } from '../db/types'
 import type { AreaStatus, SurveySummary } from '../lib/completeness'
-import { formatCm } from '../lib/format'
 import { Button, Card, Icon, TextInput } from './ui'
 import { useToast } from './Toast'
+import { AreaEditorCard } from './AreaEditorCard'
 
 function Chip({ tone, children }: { tone: 'ok' | 'warn' | 'todo' | 'info'; children: React.ReactNode }) {
   const cls = {
@@ -67,14 +66,25 @@ export function CompletenessCard({ sum }: { sum: SurveySummary }) {
 }
 
 function AddAreaSheet({ surveyId, onClose }: { surveyId: string; onClose: () => void }) {
-  const nav = useNavigate()
   const toast = useToast()
   const [custom, setCustom] = useState('')
   async function add(kind: AreaKind, name: string) {
     const id = await addArea(surveyId, kind, name)
     toast(`已新增「${name}」`)
     onClose()
-    nav(`/survey/${surveyId}/area/${id}`)
+    // 新區域出現在列表最後，捲動過去並聚焦寬度欄位
+    const started = Date.now()
+    const tryFocus = () => {
+      const el = document.getElementById(`area-${id}`)
+      const input = el?.querySelector<HTMLInputElement>('input[data-dim]')
+      if (!el || !input) {
+        if (Date.now() - started < 3000) setTimeout(tryFocus, 50)
+        return
+      }
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      input.focus({ preventScroll: true })
+    }
+    tryFocus()
   }
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-slate-900/40" onClick={onClose}>
@@ -109,57 +119,26 @@ function AddAreaSheet({ surveyId, onClose }: { surveyId: string; onClose: () => 
 }
 
 export function AreaList({ surveyId, sum }: { surveyId: string; sum: SurveySummary }) {
-  const nav = useNavigate()
   const [adding, setAdding] = useState(false)
   const [sorting, setSorting] = useState(false)
   const list = sum.areas
 
   return (
-    <Card>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-500">場勘區域</h2>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-sm font-semibold tracking-wide text-slate-500">場勘區域（{list.length}）</h2>
         {list.length > 1 && (
           <button onClick={() => setSorting((v) => !v)} className="rounded-lg px-2 py-1 text-sm font-medium text-brand-600 active:bg-brand-50">
             {sorting ? '完成排序' : '調整排序'}
           </button>
         )}
       </div>
-      <ul className="divide-y divide-slate-100">
-        {list.map((s, i) => (
-          <li key={s.area.id} className="flex items-center gap-2 py-3">
-            <button className="min-w-0 flex-1 text-left" disabled={sorting} onClick={() => nav(`/survey/${surveyId}/area/${s.area.id}`)}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-base font-semibold text-slate-900">{s.area.name}</span>
-                {!sorting && <span className="text-slate-300">{Icon.chevron}</span>}
-              </div>
-              <div className="mt-1 grid grid-cols-3 gap-1 text-sm tabular-nums">
-                {(['寬', '深', '高'] as const).map((l, k) => {
-                  const v = [s.area.width_cm, s.area.depth_cm, s.area.height_cm][k]
-                  return (
-                    <span key={l} className={v === null ? 'text-slate-400' : 'font-medium text-slate-800'}>
-                      {l} {formatCm(v)}
-                    </span>
-                  )
-                })}
-              </div>
-              <div className="mt-2">
-                <AreaChips s={s} />
-              </div>
-            </button>
-            {sorting && (
-              <div className="flex flex-col gap-1">
-                <button aria-label={`${s.area.name} 上移`} disabled={i === 0} onClick={() => void moveArea(surveyId, s.area.id, -1)} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-lg disabled:opacity-30 active:bg-slate-100">↑</button>
-                <button aria-label={`${s.area.name} 下移`} disabled={i === list.length - 1} onClick={() => void moveArea(surveyId, s.area.id, 1)} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-lg disabled:opacity-30 active:bg-slate-100">↓</button>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
-      {list.length === 0 && <p className="py-4 text-center text-sm text-slate-400">還沒有區域</p>}
-      <Button variant="secondary" className="mt-2 w-full border-dashed" onClick={() => setAdding(true)}>
+      {list.map((s, i) => <AreaEditorCard key={s.area.id} s={s} index={i} total={list.length} sorting={sorting} />)}
+      {list.length === 0 && <p className="rounded-2xl border border-dashed border-slate-300 bg-white py-6 text-center text-sm text-slate-400">還沒有區域</p>}
+      <Button variant="secondary" className="w-full border-dashed" onClick={() => setAdding(true)}>
         {Icon.plus} 新增區域
       </Button>
       {adding && <AddAreaSheet surveyId={surveyId} onClose={() => setAdding(false)} />}
-    </Card>
+    </div>
   )
 }

@@ -114,7 +114,7 @@ function Viewer({ photos, start, onClose }: { photos: SurveyPhoto[]; start: numb
   )
 }
 
-export function PhotoSection({ areaId }: { areaId: string }) {
+export function PhotoSection({ areaId, bare = false }: { areaId: string; bare?: boolean }) {
   const toast = useToast()
   const camRef = useRef<HTMLInputElement>(null)
   const galRef = useRef<HTMLInputElement>(null)
@@ -147,8 +147,9 @@ export function PhotoSection({ areaId }: { areaId: string }) {
     if (ok) toast(`已儲存 ${ok} 張照片到本機`)
   }
 
+  const Wrap = bare ? 'div' : Card
   return (
-    <Card>
+    <Wrap>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold tracking-wide text-slate-500">現場照片 {photos?.length ? `（${photos.length}）` : ''}</h2>
         {failed && (
@@ -158,10 +159,10 @@ export function PhotoSection({ areaId }: { areaId: string }) {
         )}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <button type="button" disabled={!!busy} onClick={() => camRef.current?.click()} className="flex h-20 flex-col items-center justify-center gap-1 rounded-2xl bg-brand-600 text-base font-semibold text-white active:bg-brand-700 disabled:opacity-50">
+        <button type="button" disabled={!!busy} onClick={() => camRef.current?.click()} className={`flex ${bare ? 'h-14 flex-row' : 'h-20 flex-col'} items-center justify-center gap-1 rounded-2xl bg-brand-600 text-base font-semibold text-white active:bg-brand-700 disabled:opacity-50`}>
           <span className="text-2xl">📷</span>拍照
         </button>
-        <button type="button" disabled={!!busy} onClick={() => galRef.current?.click()} className="flex h-20 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-brand-600 text-base font-semibold text-brand-700 active:bg-brand-50 disabled:opacity-50">
+        <button type="button" disabled={!!busy} onClick={() => galRef.current?.click()} className={`flex ${bare ? 'h-14 flex-row' : 'h-20 flex-col'} items-center justify-center gap-1 rounded-2xl border-2 border-brand-600 text-base font-semibold text-brand-700 active:bg-brand-50 disabled:opacity-50`}>
           <span className="text-2xl">🖼️</span>從相簿選取
         </button>
       </div>
@@ -176,6 +177,6 @@ export function PhotoSection({ areaId }: { areaId: string }) {
         <p className="mt-3 rounded-xl border border-dashed border-amber-300 bg-amber-50 py-4 text-center text-sm text-amber-700">尚未拍照</p>
       )}
       {view !== null && photos && <Viewer photos={photos} start={view} onClose={() => setView(null)} />}
-    </Card>
+    </Wrap>
   )
 }
