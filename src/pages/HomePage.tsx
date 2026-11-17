@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { useAuth, useUserId } from '../auth/AuthProvider'
-import { supabase } from '../lib/supabase'
+import { useUserId } from '../auth/AuthProvider'
 import { formatDate, normalize } from '../lib/format'
 import { Icon, IconButton, TextInput, TopBar } from '../components/ui'
 import { RowSync } from '../components/SyncBadge'
@@ -11,10 +10,8 @@ import { SyncStatusBar } from '../components/SyncStatusBar'
 
 export function HomePage() {
   const userId = useUserId()
-  const { user } = useAuth()
   const nav = useNavigate()
   const [q, setQ] = useState('')
-  const [menu, setMenu] = useState(false)
 
   const surveys = useLiveQuery(
     () =>
@@ -47,29 +44,11 @@ export function HomePage() {
       <TopBar
         title="場勘紀錄"
         right={
-          <IconButton label="帳號" onClick={() => setMenu((v) => !v)}>
+          <IconButton label="設定" onClick={() => nav('/settings')}>
             {Icon.user}
           </IconButton>
         }
       />
-      {menu && (
-        <div className="fixed inset-0 z-30" onClick={() => setMenu(false)}>
-          <div className="absolute right-3 top-[calc(env(safe-area-inset-top)+3.75rem)] w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="truncate px-3 py-2 text-sm text-slate-500">{user?.email}</div>
-            <button
-              className="w-full rounded-xl px-3 py-3 text-left text-base text-red-600 active:bg-red-50"
-              onClick={async () => {
-                const pending = await db.outbox.where('userId').equals(userId).count()
-                if (pending > 0 && !confirm(`還有 ${pending} 筆資料尚未同步到雲端。\n登出後資料仍保留在這台裝置，重新登入會繼續同步。\n\n確定要登出嗎？`)) return
-                await supabase!.auth.signOut({ scope: 'local' })
-              }}
-            >
-              登出
-            </button>
-          </div>
-        </div>
-      )}
-
       <main className="mx-auto max-w-2xl space-y-3 px-4 pt-3">
         <SyncStatusBar />
         <div className="relative">

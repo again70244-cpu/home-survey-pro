@@ -6,9 +6,11 @@ import { HomePage } from './pages/HomePage'
 import { SurveyFormPage } from './pages/SurveyFormPage'
 import { SurveyDetailPage } from './pages/SurveyDetailPage'
 import { ToastProvider } from './components/Toast'
+import { UpdateBanner } from './components/UpdateBanner'
 import { ConflictsPage } from './pages/ConflictsPage'
 import { AreaPage } from './pages/AreaPage'
 import { ReportPage } from './pages/ReportPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { useEffect } from 'react'
 import { startSync } from './sync/engine'
 
@@ -40,6 +42,7 @@ function AppRoutes() {
       <Route path="/survey/:id/area/:areaId" element={<AreaPage />} />
       <Route path="/survey/:id/report" element={<ReportPage />} />
       <Route path="/conflicts" element={<ConflictsPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
@@ -50,6 +53,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <UpdateBanner />
         <HashRouter>
           <AppRoutes />
         </HashRouter>

@@ -126,11 +126,7 @@ async function pushOne(item: OutboxItem): Promise<void> {
     }
     // 先上傳照片檔案，成功後才送出資料列；本機檔案保留不刪除
     if (!local.deleted_at && local._blobState === 'pending') {
-      const b = await db.photoBlobs.get(item.rowId)
-      if (!b) throw new Error('本機找不到這張照片的檔案')
-      const { error } = await sb.storage.from(BUCKET).upload(local.storage_path as string, b.blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' })
-      if (error) throw error
-      await t.update(item.rowId, { _blobState: 'uploaded' })
+      await uploadBlob(local)
       local._blobState = 'uploaded'
     }
   }
@@ -168,33 +164,129 @@ async function pushOne(item: OutboxItem): Promise<void> {
     await sb.storage.from(BUCKET).remove([remote!.storage_path as string]).catch(() => {})
   }
 
-  // 成功：若送出期間本機又被修改，保留 dirty 讓下一輪再送
+  await markPushed(item, snapshotUpdatedAt, remote!)
+}
+
+/** 推送成功：若送出期間本機又被修改，保留 dirty 讓下一輪再送 */
+async function markPushed(item: OutboxItem, snapshotUpdatedAt: string, remote: Record<string, unknown>) {
+  const t = tableOf(item.table)
   await db.transaction('rw', t, db.outbox, async () => {
     const cur = await t.get(item.rowId)
     if (!cur) return
     if (cur.updated_at === snapshotUpdatedAt) {
-      await t.put(fromRemote(item.table, remote!, cur) as never)
+      await t.put(fromRemote(item.table, remote, cur) as never)
       await db.outbox.delete(item.key)
     } else {
-      await t.update(item.rowId, { _baseRevision: remote!.revision as number, revision: remote!.revision as number, _syncError: null })
+      await t.update(item.rowId, { _baseRevision: remote.revision as number, revision: remote.revision as number, _syncError: null })
     }
   })
 }
 
+async function uploadBlob(local: Record<string, unknown>) {
+  const id = local.id as string
+  const b = await db.photoBlobs.get(id)
+  if (!b) throw new Error('本機找不到這張照片的檔案')
+  const { error } = await supabase!.storage.from(BUCKET).upload(local.storage_path as string, b.blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' })
+  if (error) throw error
+  await tableOf('survey_photos').update(id, { _blobState: 'uploaded' })
+}
+
+/** 有限並行 */
+async function parallel<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
+  let i = 0
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) await fn(items[i++])
+  }))
+}
+
+/**
+ * 批次新增：從未上傳過的資料一次送出（每批 200 筆），大幅縮短大量離線資料或還原後的同步時間。
+ * 回傳需要逐筆處理的項目（更新、刪除、已存在或批次失敗）。
+ */
+async function pushNewInBatch(table: TableName, items: OutboxItem[], onError: (it: OutboxItem, err: unknown) => Promise<void>): Promise<OutboxItem[]> {
+  const t = tableOf(table)
+  const rows = await t.bulkGet(items.map((i) => i.rowId))
+  const conflicted = new Set((await db.conflicts.bulkGet(items.map((i) => i.key))).filter(Boolean).map((c) => c!.key))
+  const rest: OutboxItem[] = []
+  let cand: [OutboxItem, BaseRow & Record<string, unknown>][] = []
+  items.forEach((it, k) => {
+    const r = rows[k]
+    if (r && r._baseRevision === 0 && !r.deleted_at && !conflicted.has(it.key)) cand.push([it, r])
+    else rest.push(it)
+  })
+  if (table === 'survey_photos') {
+    // 照片檔案 4 張並行上傳；失敗的留給逐筆流程顯示錯誤
+    const ok: typeof cand = []
+    await parallel(cand, 4, async ([it, r]) => {
+      try {
+        if (r._blobState === 'pending') {
+          await uploadBlob(r)
+          r._blobState = 'uploaded'
+        }
+        ok.push([it, r])
+      } catch (err) {
+        if (isNetworkError(err)) throw new NetworkDown(errText(err))
+        await onError(it, err)
+      }
+    })
+    cand = ok
+  }
+  for (let k = 0; k < cand.length; k += 200) {
+    const chunk = cand.slice(k, k + 200)
+    const { data, error } = await supabase!.from(table).upsert(chunk.map(([, r]) => pick(r, table)), { onConflict: 'id', ignoreDuplicates: true }).select()
+    if (error) {
+      if (isNetworkError(error)) throw new NetworkDown(errText(error))
+      rest.push(...chunk.map(([it]) => it)) // 例如其中一筆違反權限：改為逐筆找出是哪一筆
+      continue
+    }
+    const got = new Map((data ?? []).map((d) => [d.id as string, d]))
+    const existing: [OutboxItem, BaseRow & Record<string, unknown>][] = []
+    for (const [it, r] of chunk) {
+      const remote = got.get(it.rowId)
+      if (remote) await markPushed(it, r.updated_at, remote)
+      else existing.push([it, r])
+    }
+    // 雲端已有同 ID（例如回應遺失後重送、從備份還原）：一次讀回比對內容
+    if (existing.length) {
+      const { data: found, error: e2 } = await supabase!.from(table).select('*').in('id', existing.map(([it]) => it.rowId))
+      if (e2) {
+        if (isNetworkError(e2)) throw new NetworkDown(errText(e2))
+        rest.push(...existing.map(([it]) => it))
+        continue
+      }
+      const byId = new Map((found ?? []).map((d) => [d.id as string, d]))
+      for (const [it, r] of existing) {
+        const remote = byId.get(it.rowId)
+        if (!remote) rest.push(it)
+        else if (sameContent(table, r, remote)) await markPushed(it, r.updated_at, remote)
+        else await recordConflict(it, r, remote)
+      }
+    }
+  }
+  return rest
+}
+
 async function push(userId: string) {
   const items = await db.outbox.where('userId').equals(userId).toArray()
-  items.sort((a, b) => TABLE_ORDER.indexOf(a.table) - TABLE_ORDER.indexOf(b.table) || a.createdAt - b.createdAt)
   let failures = 0
-  for (const item of items) {
-    try {
-      await pushOne(item)
-    } catch (err) {
-      if (isNetworkError(err)) throw new NetworkDown(errText(err))
-      failures++
-      const msg = errText(err)
-      await db.outbox.update(item.key, { attempts: item.attempts + 1, lastError: msg })
-      await tableOf(item.table).update(item.rowId, { _syncError: msg })
-      setState({ lastError: msg })
+  const onError = async (item: OutboxItem, err: unknown) => {
+    failures++
+    const msg = errText(err)
+    await db.outbox.update(item.key, { attempts: item.attempts + 1, lastError: msg })
+    await tableOf(item.table).update(item.rowId, { _syncError: msg })
+    setState({ lastError: msg })
+  }
+  for (const table of TABLE_ORDER) {
+    const mine = items.filter((i) => i.table === table).sort((a, b) => a.createdAt - b.createdAt)
+    if (!mine.length) continue
+    const rest = await pushNewInBatch(table, mine, onError)
+    for (const item of rest) {
+      try {
+        await pushOne(item)
+      } catch (err) {
+        if (err instanceof NetworkDown || isNetworkError(err)) throw new NetworkDown(errText(err))
+        await onError(item, err)
+      }
     }
   }
   return failures
@@ -284,10 +376,10 @@ async function prefetchPhotos(userId: string) {
   const since = new Date(Date.now() - PREFETCH_DAYS * 86400000).toISOString()
   const recent = new Set((await db.surveys.where('user_id').equals(userId).toArray()).filter((s) => !s.deleted_at && s.updated_at >= since).map((s) => s.id))
   const todo = (await db.survey_photos.where('_blobState').equals('remote-only').toArray()).filter((p) => p.user_id === userId && !p.deleted_at && recent.has(p.survey_id))
-  for (const p of todo) {
+  await parallel(todo, 3, async (p) => {
     if (!navigator.onLine || currentUser !== userId) return
     await ensurePhotoBlob(p.id)
-  }
+  })
 }
 
 // ---------------------------------------------------------------------------
