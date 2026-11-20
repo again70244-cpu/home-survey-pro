@@ -11,3 +11,5 @@ alter table storage.objects enable row level security;
 grant select, insert, update, delete on storage.objects to authenticated;
 create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'),1)-1] $$;
 grant execute on function storage.foldername(text) to authenticated;
+do $$ begin if not exists (select from pg_roles where rolname='service_role') then create role service_role nologin bypassrls; end if; end $$;
+grant usage on schema public to service_role;
