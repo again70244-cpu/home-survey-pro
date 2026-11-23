@@ -5,7 +5,7 @@ import { hmacHex } from '../../supabase/functions/product-sync/handler.ts'
 // @ts-expect-error JS 模組
 import { bundle } from '../../scripts/bundle-sync.mjs'
 
-const FILE = 'supabase/functions/product-sync/dist/product-sync.bundle.ts'
+const FILE = 'supabase/deploy/product-sync.bundle.ts'
 const SECRET = 'bundle-secret-0123456789abcdef0123456789abcdef'
 
 describe('Edge Function 單檔版', () => {

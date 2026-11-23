@@ -15,7 +15,7 @@ export async function bundle(write = true) {
     legalComments: 'none',
     banner: { js: BANNER },
     write,
-    outfile: 'supabase/functions/product-sync/dist/product-sync.bundle.ts',
+    outfile: 'supabase/deploy/product-sync.bundle.ts',
   })
   return write ? null : r.outputFiles[0].text
 }
