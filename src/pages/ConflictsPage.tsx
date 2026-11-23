@@ -7,7 +7,7 @@ import { Button, Card, Icon, IconButton, TopBar, PageTitle } from '../components
 import { useToast } from '../components/Toast'
 import type { ConflictItem } from '../db/types'
 
-const TABLE_LABEL = { surveys: '場勘資料', survey_areas: '場勘區域', survey_photos: '照片' } as const
+const TABLE_LABEL = { surveys: '場勘資料', survey_areas: '場勘區域', survey_products: '安裝產品', survey_photos: '照片' } as const
 const FIELD_LABEL: Record<string, string> = {
   customer_name: '客戶姓名', customer_phone: '聯絡電話', survey_date: '場勘日期', customer_address: '客戶地址',
   product: '安裝產品', product_model: '產品型號', notes: '備註', deleted_at: '狀態', name: '區域名稱', kind: '區域類型',
@@ -25,7 +25,7 @@ function ConflictCard({ c }: { c: ConflictItem }) {
   const fields = COLUMNS[c.table].filter(
     (f) => FIELD_LABEL[f] && String(c.local[f] ?? '') !== String(c.remote[f] ?? '') && !(f === 'deleted_at' && !!c.local[f] === !!c.remote[f]),
   )
-  const title = (c.local.customer_name ?? c.local.name ?? c.local.caption ?? '') as string
+  const title = (c.local.customer_name ?? c.local.name ?? c.local.model_code ?? c.local.caption ?? '') as string
   const when = (iso: unknown) => (iso ? new Date(String(iso)).toLocaleString('zh-TW') : '')
 
   async function choose(choice: 'local' | 'remote') {

@@ -17,10 +17,11 @@ export const COLUMNS: Record<TableName, string[]> = {
   surveys: ['id', 'user_id', 'customer_name', 'customer_phone', 'survey_date', 'customer_address', 'product', 'product_model', 'notes', 'deleted_at'],
   survey_areas: ['id', 'survey_id', 'user_id', 'kind', 'name', 'width_cm', 'depth_cm', 'height_cm', 'notes', 'sort_order', 'deleted_at'],
   survey_photos: ['id', 'survey_id', 'area_id', 'user_id', 'storage_path', 'caption', 'sort_order', 'width', 'height', 'size_bytes', 'mime_type', 'deleted_at'],
+  survey_products: ['id', 'survey_id', 'user_id', 'catalog_product_id', 'model_code', 'display_name', 'category', 'spec_snapshot', 'snapshot_at', 'catalog_spec_hash', 'catalog_spec_updated_at', 'sort_order', 'deleted_at'],
 }
 /** 比對內容是否相同時忽略的欄位 */
 const COMPARE_IGNORE = new Set(['id', 'user_id'])
-const TABLE_ORDER: TableName[] = ['surveys', 'survey_areas', 'survey_photos']
+const TABLE_ORDER: TableName[] = ['surveys', 'survey_areas', 'survey_products', 'survey_photos']
 const PULL_OVERLAP_MS = 2 * 60 * 1000
 const PAGE = 500
 export const BUCKET = 'survey-photos'
@@ -62,7 +63,14 @@ function pick(row: Record<string, unknown>, table: TableName) {
 function norm(v: unknown): unknown {
   if (v === undefined || v === '') return null
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) return new Date(v).getTime() // 時間格式差異
+  if (v !== null && typeof v === 'object') return canonicalJson(v) // 物件（例如規格快照）以內容比較；資料庫 jsonb 會重排鍵的順序
   return v
+}
+function canonicalJson(v: unknown): string {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v ?? null)
+  if (Array.isArray(v)) return `[${v.map(canonicalJson).join(',')}]`
+  const o = v as Record<string, unknown>
+  return `{${Object.keys(o).filter((k) => o[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${canonicalJson(o[k])}`).join(',')}}`
 }
 
 export function sameContent(table: TableName, a: Record<string, unknown>, b: Record<string, unknown>) {

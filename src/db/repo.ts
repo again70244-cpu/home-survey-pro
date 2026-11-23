@@ -1,5 +1,8 @@
 import Dexie from 'dexie'
 import { db } from './db'
+import type { CatalogProduct } from '../catalog/types'
+import type { ProductSpecSnapshot, SurveyProduct } from './types'
+import { SPEC_FIELDS } from '../../supabase/functions/_shared/catalog/installText.ts'
 import type { AreaKind, OutboxItem, Survey, SurveyArea, TableName } from './types'
 
 const nowIso = () => new Date().toISOString()
@@ -99,9 +102,14 @@ export async function updateSurvey(id: string, patch: Partial<SurveyInput>): Pro
 /** 軟刪除場勘（含其區域與照片），同步到雲端後其他裝置也會隱藏 */
 export async function deleteSurvey(id: string): Promise<void> {
   const t = nowIso()
-  await db.transaction('rw', db.surveys, db.survey_areas, db.survey_photos, db.outbox, async () => {
+  await db.transaction('rw', db.surveys, db.survey_areas, db.survey_photos, db.survey_products, db.outbox, async () => {
     const s = await db.surveys.get(id)
     if (!s) return
+    for (const sp of await db.survey_products.where('survey_id').equals(id).toArray()) {
+      if (sp.deleted_at) continue
+      await db.survey_products.put({ ...sp, deleted_at: t, updated_at: t, _dirty: 1 })
+      await enqueue('survey_products', sp.id, sp.user_id)
+    }
     await db.surveys.put({ ...s, deleted_at: t, updated_at: t, _dirty: 1 })
     await enqueue('surveys', id, s.user_id)
     const areas = await db.survey_areas.where('survey_id').equals(id).toArray()
@@ -274,6 +282,106 @@ export async function movePhoto(areaId: string, id: string, dir: -1 | 1): Promis
       if (list[k].sort_order === k) continue
       await db.survey_photos.put({ ...list[k], sort_order: k, updated_at: t, _dirty: 1 })
       await enqueue('survey_photos', list[k].id, list[k].user_id)
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 場勘選擇的產品（規格快照）
+// ---------------------------------------------------------------------------
+
+/** 把產品知識庫目前的資料複製成快照（之後產品資料更新也不會影響這份快照） */
+export function makeSpecSnapshot(p: CatalogProduct): ProductSpecSnapshot {
+  const snap: ProductSpecSnapshot = {
+    snapshot_version: 1,
+    model_code: p.model_code,
+    model_raw: p.model_raw,
+    display_name: p.display_name,
+    description: p.description,
+    category: p.category,
+    image_urls: p.image_urls.slice(0, 4),
+    install_text_raw: p.install_text_raw,
+    install_extra: JSON.parse(JSON.stringify(p.install_extra ?? {})),
+    parse_issues: JSON.parse(JSON.stringify(p.parse_issues ?? [])),
+    data_quality: p.data_quality,
+    source_key: p.source_key,
+    source_row: p.source_row,
+    catalog_spec_updated_at: p.spec_updated_at,
+    catalog_synced_at: p.last_synced_at,
+  }
+  for (const f of SPEC_FIELDS) {
+    const v = p[f]
+    snap[f] = v === null || v === undefined ? null : Number(v)
+  }
+  return snap
+}
+
+/** 場勘產品型號文字（surveys.product_model）：加入一個型號（已存在就不重複） */
+function addModelText(text: string | null, model: string): string {
+  const parts = (text ?? '').split(/[、,，]\s*/).map((s) => s.trim()).filter(Boolean)
+  if (!parts.some((x) => x.toUpperCase() === model.toUpperCase())) parts.push(model)
+  return parts.join('、')
+}
+function removeModelText(text: string | null, model: string): string | null {
+  const parts = (text ?? '').split(/[、,，]\s*/).map((s) => s.trim()).filter(Boolean)
+  const kept = parts.filter((x) => x.toUpperCase() !== model.toUpperCase())
+  return kept.length ? kept.join('、') : null
+}
+
+export async function addSurveyProduct(surveyId: string, product: CatalogProduct): Promise<string> {
+  const id = uuid()
+  await db.transaction('rw', db.surveys, db.survey_products, db.outbox, async () => {
+    const s = await db.surveys.get(surveyId)
+    if (!s) throw new Error('找不到這筆場勘')
+    const existing = (await db.survey_products.where('survey_id').equals(surveyId).toArray()).filter((x) => !x.deleted_at)
+    const t = nowIso()
+    const row: SurveyProduct = {
+      id,
+      survey_id: surveyId,
+      user_id: s.user_id,
+      catalog_product_id: product.id,
+      model_code: product.model_code,
+      display_name: product.display_name,
+      category: product.category,
+      spec_snapshot: makeSpecSnapshot(product),
+      snapshot_at: t,
+      catalog_spec_hash: product.spec_hash,
+      catalog_spec_updated_at: product.spec_updated_at,
+      sort_order: existing.length ? Math.max(...existing.map((x) => x.sort_order)) + 1 : 0,
+      revision: 0,
+      created_at: t,
+      updated_at: t,
+      deleted_at: null,
+      _dirty: 1,
+      _baseRevision: 0,
+    }
+    await db.survey_products.add(row)
+    await enqueue('survey_products', id, s.user_id)
+    // 同步更新場勘的「產品型號」文字（首頁列表、搜尋、報告都會用到）
+    const model = addModelText(s.product_model, product.model_code)
+    if (model !== s.product_model) {
+      await db.surveys.put({ ...s, product_model: model, updated_at: t, _dirty: 1 })
+      await enqueue('surveys', s.id, s.user_id)
+    }
+  })
+  return id
+}
+
+export async function removeSurveyProduct(id: string): Promise<void> {
+  await db.transaction('rw', db.surveys, db.survey_products, db.outbox, async () => {
+    const p = await db.survey_products.get(id)
+    if (!p || p.deleted_at) return
+    const t = nowIso()
+    await db.survey_products.put({ ...p, deleted_at: t, updated_at: t, _dirty: 1 })
+    await enqueue('survey_products', id, p.user_id)
+    const s = await db.surveys.get(p.survey_id)
+    const others = (await db.survey_products.where('survey_id').equals(p.survey_id).toArray()).filter((x) => !x.deleted_at && x.id !== id && x.model_code === p.model_code)
+    if (s && !others.length) {
+      const model = removeModelText(s.product_model, p.model_code)
+      if (model !== s.product_model) {
+        await db.surveys.put({ ...s, product_model: model, updated_at: t, _dirty: 1 })
+        await enqueue('surveys', s.id, s.user_id)
+      }
     }
   })
 }

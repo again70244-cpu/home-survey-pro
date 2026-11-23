@@ -1,4 +1,4 @@
-import type { Survey, SurveyArea, SurveyPhoto } from '../db/types'
+import type { Survey, SurveyArea, SurveyPhoto, SurveyProduct } from '../db/types'
 import { surveySummary, type SurveySummary } from '../lib/completeness'
 
 /** A4 直式（CSS px）：1240 × 1754，輸出時 pixelRatio 2 → 2480 × 3508 */
@@ -29,6 +29,7 @@ export type Block =
   | { kind: 'cover'; key: string }
   | { kind: 'summary-head'; key: string }
   | { kind: 'summary-row'; key: string; areaIndex: number }
+  | { kind: 'product'; key: string; productIndex: number }
   | { kind: 'area-head'; key: string; areaIndex: number; startsArea: true }
   | { kind: 'area-cont'; key: string; areaIndex: number }
   | { kind: 'area-notes'; key: string; areaIndex: number; text: string; first: boolean }
@@ -41,10 +42,12 @@ export interface ReportData {
   areas: SurveyArea[]
   photosByArea: Map<string, ReportPhoto[]>
   summary: SurveySummary
+  /** 場勘選擇的產品（規格以快照為準） */
+  products: SurveyProduct[]
   generatedAt: Date
 }
 
-export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>): ReportData {
+export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = []): ReportData {
   const live = photos.filter((p) => !p.deleted_at)
   const photosByArea = new Map<string, ReportPhoto[]>()
   for (const a of areas) {
@@ -54,7 +57,7 @@ export function buildReportData(survey: Survey, areas: SurveyArea[], photos: Sur
       .map((p, i) => ({ id: p.id, url: urls.get(p.id) ?? null, width: p.width ?? 4, height: p.height ?? 3, caption: p.caption, index: i + 1 }))
     photosByArea.set(a.id, list)
   }
-  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date() }
+  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products }
 }
 
 /** 照片列高度：依照片比例縮放到欄寬，取兩張中較高者，上限 PHOTO_MAX_H（不裁切，object-fit: contain） */
@@ -84,6 +87,7 @@ function splitNotes(text: string): string[] {
 export function buildBlocks(d: ReportData): Block[] {
   const blocks: Block[] = [{ kind: 'cover', key: 'cover' }, { kind: 'summary-head', key: 'sum-h' }]
   d.areas.forEach((_, i) => blocks.push({ kind: 'summary-row', key: `sum-${i}`, areaIndex: i }))
+  d.products.forEach((_, i) => blocks.push({ kind: 'product', key: `prod-${i}`, productIndex: i }))
   d.areas.forEach((a, i) => {
     blocks.push({ kind: 'area-head', key: `ah-${i}`, areaIndex: i, startsArea: true })
     if (a.notes) splitNotes(a.notes).forEach((t, k) => blocks.push({ kind: 'area-notes', key: `an-${i}-${k}`, areaIndex: i, text: t, first: k === 0 }))

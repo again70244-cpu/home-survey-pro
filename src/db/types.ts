@@ -61,7 +61,41 @@ export interface PhotoBlob {
   blob: Blob
 }
 
-export type TableName = 'surveys' | 'survey_areas' | 'survey_photos'
+/** 場勘選擇的產品；spec_snapshot 為選擇當下的規格快照，建立後不再改變 */
+export interface SurveyProduct extends BaseRow {
+  survey_id: string
+  catalog_product_id: string | null
+  model_code: string
+  display_name: string | null
+  category: string | null
+  spec_snapshot: ProductSpecSnapshot
+  snapshot_at: string
+  catalog_spec_hash: string | null
+  catalog_spec_updated_at: string | null
+  sort_order: number
+}
+
+/** 規格快照內容（保存選擇當下產品知識庫的資料） */
+export interface ProductSpecSnapshot {
+  snapshot_version: 1
+  model_code: string
+  model_raw: string
+  display_name: string | null
+  description: string | null
+  category: string | null
+  image_urls: string[]
+  install_text_raw: string | null
+  install_extra: Record<string, unknown>
+  parse_issues: { code: string; message: string; line?: string; field?: string }[]
+  data_quality: 'complete' | 'missing' | 'invalid' | 'needs_review'
+  source_key: string
+  source_row: number | null
+  catalog_spec_updated_at: string
+  catalog_synced_at: string
+  [spec: string]: unknown
+}
+
+export type TableName = 'surveys' | 'survey_areas' | 'survey_products' | 'survey_photos'
 
 export interface OutboxItem {
   key: string // `${table}:${rowId}`

@@ -67,7 +67,8 @@ export function ReportPage() {
           urls.set(photos[i].id, u)
         }
         if (!alive) return
-        const d = buildReportData(survey, areas, photos, urls)
+        const products = (await db.survey_products.where('survey_id').equals(id!).toArray()).filter((p) => !p.deleted_at).sort((a, b) => a.sort_order - b.sort_order)
+        const d = buildReportData(survey, areas, photos, urls, products)
         setMissingPhotos(missing)
         setData(d)
         setBlocks(buildBlocks(d))

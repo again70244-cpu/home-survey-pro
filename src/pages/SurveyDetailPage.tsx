@@ -6,6 +6,7 @@ import { useUserId } from '../auth/AuthProvider'
 import { formatDate } from '../lib/format'
 import { surveySummary } from '../lib/completeness'
 import { AreaList, CompletenessCard } from '../components/AreaList'
+import { SurveyProducts } from '../components/SurveyProducts'
 import { BottomBar, Button, Card, Icon, IconButton, PageTitle, SectionLabel, TextButton, TopBar } from '../components/ui'
 import { RowSync } from '../components/SyncBadge'
 import { SyncStatusBar } from '../components/SyncStatusBar'
@@ -81,6 +82,7 @@ export function SurveyDetailPage() {
           {conflict && <p className="text-sm text-red-700">此場勘有版本衝突待處理</p>}
         </div>
         <CompletenessCard sum={sum} />
+        <SurveyProducts surveyId={s.id} />
         <AreaList surveyId={s.id} sum={sum} />
         <Card className="mt-6">
           <SectionLabel right={<RowSync row={s} hasConflict={conflict} />}>場勘資料</SectionLabel>

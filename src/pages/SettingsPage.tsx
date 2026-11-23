@@ -43,7 +43,7 @@ export function SettingsPage() {
     run('準備備份中…', async () => {
       const { blob, json } = await exportZip(userId, user?.email ?? null, (d, t) => setBusy(`準備照片 ${d}/${t}`))
       downloadBlob(blob, `場勘備份_${stamp()}.zip`)
-      setInfo(`已匯出 ${json.counts.surveys} 筆場勘、${json.counts.areas} 個區域、${json.counts.photoFiles} 張原始照片。${json.missingPhotoFiles.length ? `（${json.missingPhotoFiles.length} 張照片因離線且未下載而未包含）` : ''}`)
+      setInfo(`已匯出 ${json.counts.surveys} 筆場勘、${json.counts.areas} 個區域、${json.counts.products ?? 0} 個安裝產品、${json.counts.photoFiles} 張原始照片。${json.missingPhotoFiles.length ? `（${json.missingPhotoFiles.length} 張照片因離線且未下載而未包含）` : ''}`)
     })
   const onJson = () =>
     run('匯出中…', async () => {
@@ -55,7 +55,7 @@ export function SettingsPage() {
     run('還原中…', async () => {
       const r = await applyRestore(plan!, userId)
       setPlan(null)
-      setInfo(`還原完成：新增 ${r.surveys} 筆場勘、${r.areas} 個區域、${r.photos} 張照片，將自動同步到雲端。`)
+      setInfo(`還原完成：新增 ${r.surveys} 筆場勘、${r.areas} 個區域、${r.products} 個安裝產品、${r.photos} 張照片，將自動同步到雲端。`)
       toast('還原完成')
       void syncNow()
     })
@@ -66,7 +66,7 @@ export function SettingsPage() {
     await supabase!.auth.signOut({ scope: 'local' })
   }
 
-  const nothingNew = plan && !plan.newSurveys.length && !plan.newAreas.length && !plan.newPhotos.length
+  const nothingNew = plan && !plan.newSurveys.length && !plan.newAreas.length && !plan.newPhotos.length && !plan.newProducts.length
 
   return (
     <div className="min-h-dvh pb-10">
@@ -121,8 +121,8 @@ export function SettingsPage() {
           <div className="w-full bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6" role="dialog" aria-label="確認還原">
             <h3 className="text-2xl font-light text-ink">確認從備份還原</h3>
             <p className="mt-1 text-sm text-sub">備份時間：{new Date(plan.json.exportedAt).toLocaleString('zh-TW')}{plan.json.account?.email ? `・${plan.json.account.email}` : ''}</p>
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              {([['場勘', plan.newSurveys.length, plan.skipped.surveys], ['區域', plan.newAreas.length, plan.skipped.areas], ['照片', plan.newPhotos.length, plan.skipped.photos]] as const).map(([l, n, sk]) => (
+            <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+              {([['場勘', plan.newSurveys.length, plan.skipped.surveys], ['區域', plan.newAreas.length, plan.skipped.areas], ['照片', plan.newPhotos.length, plan.skipped.photos], ['產品', plan.newProducts.length, plan.skipped.products]] as const).map(([l, n, sk]) => (
                 <div key={l} className="border-t border-ink pt-3">
                   <div className="text-xs text-sub">{l}</div>
                   <div className="text-3xl font-light text-ink">+{n}</div>

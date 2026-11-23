@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { db } from '../db/db'
-import { createSurvey, emptySurveyInput, updateSurvey, type SurveyInput } from '../db/repo'
+import { addSurveyProduct, createSurvey, emptySurveyInput, updateSurvey, type SurveyInput } from '../db/repo'
+import { ProductPicker } from '../components/ProductPicker'
+import type { CatalogProduct } from '../catalog/types'
 import { useUserId } from '../auth/AuthProvider'
 import { Button, ErrorBox, Field, Icon, IconButton, TextArea, TextInput, TopBar, PageTitle } from '../components/ui'
 import { useToast } from '../components/Toast'
@@ -15,6 +17,8 @@ export function SurveyFormPage() {
   const nav = useNavigate()
   const toast = useToast()
   const [form, setForm] = useState<SurveyInput | null>(isNew ? emptySurveyInput() : null)
+  const [picked, setPicked] = useState<CatalogProduct[]>([])
+  const [picking, setPicking] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -56,6 +60,7 @@ export function SurveyFormPage() {
       }
       if (isNew) {
         const newId = await createSurvey(userId, clean)
+        for (const p of picked) await addSurveyProduct(newId, p) // 選擇的產品：保存當下規格快照
         toast('已儲存到本機')
         nav(`/survey/${newId}`, { replace: true })
       } else {
@@ -97,6 +102,25 @@ export function SurveyFormPage() {
           </section>
           <section className="space-y-5 border-t border-line py-6">
             <h2 className="text-xs font-medium tracking-[0.18em] text-sub">預計安裝產品</h2>
+            {isNew && (
+              <div>
+                {picked.length > 0 && (
+                  <ul className="mb-3 border-t border-ink" aria-label="已選擇的產品">
+                    {picked.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between border-b border-line py-2.5">
+                        <span className="min-w-0">
+                          <span className="block text-[16px]">{p.model_code}</span>
+                          <span className="block truncate text-xs text-sub">{p.width_cm != null ? `寬 ${p.width_cm}・高 ${p.height_cm ?? '—'}・深 ${p.depth_cm ?? '—'} cm` : '試算表未提供安裝尺寸'}</span>
+                        </span>
+                        <button type="button" onClick={() => setPicked((x) => x.filter((y) => y.id !== p.id))} className="h-9 shrink-0 px-1 text-[13px] text-red-700 underline underline-offset-4" aria-label={`取消選擇 ${p.model_code}`}>取消</button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Button type="button" variant="secondary" className="w-full" onClick={() => setPicking(true)}>{Icon.plus} 從 LG 產品知識庫選擇</Button>
+                <p className="mt-1.5 text-xs text-sub">選擇後會自動帶入安裝規格並保存在這筆場勘中</p>
+              </div>
+            )}
             <Field label="產品型號">
               <TextInput value={form.product_model ?? ''} onChange={set('product_model')} placeholder="例如：WD-S19VDW" />
             </Field>
@@ -115,6 +139,16 @@ export function SurveyFormPage() {
             </Button>
           </div>
         </div>
+      )}
+      {picking && (
+        <ProductPicker
+          selected={picked.map((p) => p.id)}
+          onClose={() => setPicking(false)}
+          onPick={(p) => {
+            setPicked((x) => (x.some((y) => y.id === p.id) ? x : [...x, p]))
+            setForm((f) => (f && !f.product_model?.trim() ? { ...f, product_model: p.model_code } : f))
+          }}
+        />
       )}
     </div>
   )

@@ -3,6 +3,7 @@ import { forwardRef, type CSSProperties, type ReactNode } from 'react'
 import { AREA_KIND_LABEL } from '../db/types'
 import { formatDate } from '../lib/format'
 import { dimState } from '../lib/completeness'
+import { SPEC_FIELDS, SPEC_LABELS } from '../../supabase/functions/_shared/catalog/installText.ts'
 import {
   CONTENT_W, FOOTER_H, GAP, HEADER_H, MARGIN_BOTTOM, MARGIN_TOP, MARGIN_X, PAGE_H, PAGE_W, PHOTO_CELL_W, PHOTO_GAP,
   type Block, type ReportData, type ReportPhoto,
@@ -99,6 +100,43 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
           <div style={{ fontWeight: 700, color: C.ink, wordBreak: 'break-word', paddingRight: 8 }}>{a.name}</div>
           <div>{cell(a.width_cm)}</div><div>{cell(a.depth_cm)}</div><div>{cell(a.height_cm)}</div>
           <div style={{ textAlign: 'right', color: n ? C.ink : C.warn, fontWeight: n ? 700 : 400 }}>{n ? `${n} 張` : '未拍照'}</div>
+        </div>
+      )
+    }
+    case 'product': {
+      const sp = d.products[b.productIndex]
+      const s = sp.spec_snapshot as Record<string, unknown>
+      const v = (f: string) => (s[f] === null || s[f] === undefined ? null : (s[f] as number))
+      const extras = SPEC_FIELDS.filter((f) => !['width_cm', 'height_cm', 'depth_cm'].includes(f) && v(f) !== null)
+      return (
+        <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: '16px 20px' }}>
+          {b.productIndex === 0 && <div style={{ fontSize: 34, fontWeight: 800, color: C.ink, margin: '-2px 0 14px' }}>安裝產品規格</div>}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+            <div style={{ fontSize: 30, fontWeight: 800, color: C.ink }}>{sp.model_code}</div>
+            <div style={{ fontSize: 21, color: C.sub, flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{sp.display_name ?? ''}</div>
+          </div>
+          {s.data_quality === 'missing' ? (
+            <div style={{ fontSize: 22, color: C.warn, marginTop: 10 }}>試算表未提供此產品的安裝尺寸，請現場確認</div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                <Dim label="產品寬 W" v={v('width_cm')} big={false} />
+                <Dim label="產品高 H" v={v('height_cm')} big={false} />
+                <Dim label="產品深 D" v={v('depth_cm')} big={false} />
+              </div>
+              {extras.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 28, marginTop: 10, fontSize: 21, color: C.text }}>
+                  {extras.map((f) => (
+                    <div key={f} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.line}`, padding: '6px 0' }}>
+                      <span style={{ color: C.sub }}>{SPEC_LABELS[f]}</span>
+                      <span style={{ fontWeight: 700 }}>{v(f)} cm</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          <div style={{ fontSize: 18, color: C.mute, marginTop: 10 }}>規格來源：LG 產品知識庫（{fmtDateTime(new Date(sp.snapshot_at))} 選擇時的資料）</div>
         </div>
       )
     }
