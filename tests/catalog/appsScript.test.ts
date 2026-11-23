@@ -32,7 +32,7 @@ const FORBIDDEN_HEADERS = ['產品原價', '周年慶低售(6期)', '促銷/備�
 function makeEnv(fetchResponse: { code: number; body: unknown }) {
   const reads: { sheet: string; row: number; col: number; rows: number; cols: number }[] = []
   const requests: { url: string; opts: any }[] = []
-  const props = new Map<string, string>([['SYNC_URL', 'https://x.supabase.co/functions/v1/product-sync'], ['SYNC_SECRET', SECRET], ['DATASET', 'staging']])
+  const props = new Map<string, string>([['PRODUCT_SYNC_URL', 'https://x.supabase.co/functions/v1/product-sync'], ['PRODUCT_SYNC_SECRET', SECRET], ['PRODUCT_SYNC_DATASET', 'staging']])
   const sheet = (name: string) => {
     const data = SHEETS[name]
     if (!data) return null
@@ -76,7 +76,7 @@ function makeEnv(fetchResponse: { code: number; body: unknown }) {
 describe('Google Apps Script（ProductSync.gs）', () => {
   it('只讀白名單欄位：價格、促銷欄位的資料從未被讀取；白名單／業績工作表完全沒被打開', () => {
     const { ctx, reads, requests } = makeEnv({ code: 200, body: { status: 'success' } })
-    const r = vm.runInContext("runSync_('manual', 'sync', false)", ctx)
+    const r = vm.runInContext("productSyncRun_('manual', 'sync', false)", ctx)
     expect(r.status).toBe('success')
     const dataReads = reads.filter((x) => x.row >= 2)
     for (const rd of dataReads) {
@@ -92,7 +92,7 @@ describe('Google Apps Script（ProductSync.gs）', () => {
 
   it('簽章可通過 Edge Function 驗證；空白列不送出', async () => {
     const { ctx, requests } = makeEnv({ code: 200, body: { status: 'success' } })
-    vm.runInContext("runSync_('manual', 'sync', false)", ctx)
+    vm.runInContext("productSyncRun_('manual', 'sync', false)", ctx)
     const { url, opts } = requests[0]
     const sent = JSON.parse(opts.payload)
     expect(sent.products.rows.map((r: any) => r.row)).toEqual([2, 3]) // 第 4 列是空白列
@@ -111,23 +111,30 @@ describe('Google Apps Script（ProductSync.gs）', () => {
 
   it('定期同步：資料沒變就不呼叫伺服器；伺服器失敗時不記錄雜湊（下次自動重試）', () => {
     const ok = makeEnv({ code: 200, body: { status: 'success' } })
-    vm.runInContext("runSync_('schedule', 'sync', false)", ok.ctx)
-    vm.runInContext("runSync_('schedule', 'sync', false)", ok.ctx)
+    vm.runInContext("productSyncRun_('schedule', 'sync', false)", ok.ctx)
+    vm.runInContext("productSyncRun_('schedule', 'sync', false)", ok.ctx)
     expect(ok.requests).toHaveLength(1)
 
     const fail = makeEnv({ code: 502, body: { status: 'failed', error: 'db down' } })
-    vm.runInContext("runSync_('schedule', 'sync', false)", fail.ctx)
-    expect(fail.props.get('LAST_SENT_HASH')).toBeUndefined()
+    vm.runInContext("productSyncRun_('schedule', 'sync', false)", fail.ctx)
+    expect(fail.props.get('PRODUCT_SYNC_LAST_HASH')).toBeUndefined()
     expect(fail.requests.length).toBe(3) // 伺服器錯誤自動重試 3 次
-    vm.runInContext("runSync_('schedule', 'sync', false)", fail.ctx)
+    vm.runInContext("productSyncRun_('schedule', 'sync', false)", fail.ctx)
     expect(fail.requests.length).toBe(6) // 下一次定期同步仍會再試
-    expect(fail.props.get('LAST_RESULT')).toContain('失敗')
+    expect(fail.props.get('PRODUCT_SYNC_LAST_RESULT')).toContain('失敗')
+  })
+
+  it('所有全域名稱都有前綴，不會覆蓋既有程式（例如 onOpen、setup、doGet）', () => {
+    const names = [...code.matchAll(/^function\s+(\w+)/gm)].map((m) => m[1]).concat([...code.matchAll(/^var\s+(\w+)/gm)].map((m) => m[1]))
+    expect(names.length).toBeGreaterThan(10)
+    for (const n of names) expect(n).toMatch(/^(productSync|PS_)/)
+    expect(code).not.toMatch(/function (onOpen|onEdit|doGet|doPost|setup)\b/)
   })
 
   it('網路中斷：重試後回報失敗，不拋出未處理例外', () => {
     const { ctx } = makeEnv({ code: 200, body: {} })
     ctx.UrlFetchApp.fetch = () => { throw new Error('Address unavailable') }
-    const r = vm.runInContext("runSync_('manual', 'sync', false)", ctx)
+    const r = vm.runInContext("productSyncRun_('manual', 'sync', false)", ctx)
     expect(r.status).toBe('failed')
     expect(r.error).toContain('已重試 3 次')
   })

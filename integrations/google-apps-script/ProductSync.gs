@@ -1,12 +1,14 @@
 /**
  * LG 產品知識庫同步（Google Sheets → Supabase）
  *
- * 安裝：試算表 → 擴充功能 → Apps Script → 貼上本檔 → 儲存
+ * 安裝：試算表 → 擴充功能 → Apps Script → 左側「檔案」旁的 ＋ → 指令碼 → 命名 ProductSync → 貼上本檔 → 儲存
+ *      （請「新增檔案」，不要刪除或覆蓋既有的程式；本檔所有名稱都以 productSync／PS_ 開頭，不會與既有程式衝突）
  *      專案設定 → 指令碼屬性（Script Properties）新增：
- *        SYNC_URL     = https://<專案>.supabase.co/functions/v1/product-sync
- *        SYNC_SECRET  = （與 Supabase 的 PRODUCT_SYNC_SECRET 相同）
- *        DATASET      = production（測試用副本請設 staging）
- *      回到編輯器，選擇函式 setup → 執行 → 授權
+ *        PRODUCT_SYNC_URL     = https://<專案>.supabase.co/functions/v1/product-sync
+ *        PRODUCT_SYNC_SECRET  = （與 Supabase 的 PRODUCT_SYNC_SECRET 相同）
+ *        PRODUCT_SYNC_DATASET = production（測試用副本請設 staging）
+ *      回到編輯器，選擇函式 productSyncSetup → 執行 → 授權
+ *      （選單「LG 產品同步」由 productSyncSetup 安裝的開啟觸發器建立，不使用 onOpen，避免與既有程式衝突）
  *
  * 安全
  * - 只讀取「報價」「一對多報價」兩張工作表，而且只讀下方白名單中的欄位（依欄位標題找欄）。
@@ -14,119 +16,120 @@
  * - 密鑰只存在 Script Properties，不寫在程式碼裡。
  */
 
-var PRODUCT_SHEET = '報價';
-var MULTI_SPLIT_SHEET = '一對多報價';
-var PRODUCT_COLUMNS = ['產品型號', '分類', '圖片網址', '圖片網址2', '圖片網址3', '圖片網址4', '安裝尺寸', '連結', '影片網址', '保養說明'];
-var MULTI_SPLIT_COLUMNS = ['室外機型號', '室內機1', '室內機2', '室內機3', '室內機4', '室內機5', '室內機6', '室內機7', '備註'];
-var LINK_COLUMNS = ['圖片網址', '圖片網址2', '圖片網址3', '圖片網址4', '連結', '影片網址'];
-var DEBOUNCE_MS = 2 * 60 * 1000;   // 修改後等 2 分鐘再同步（期間的修改合併）
-var SCHEDULE_MINUTES = 15;          // 定期檢查
+var PS_PRODUCT_SHEET = '報價';
+var PS_MULTI_SPLIT_SHEET = '一對多報價';
+var PS_PRODUCT_COLUMNS = ['產品型號', '分類', '圖片網址', '圖片網址2', '圖片網址3', '圖片網址4', '安裝尺寸', '連結', '影片網址', '保養說明'];
+var PS_MULTI_SPLIT_COLUMNS = ['室外機型號', '室內機1', '室內機2', '室內機3', '室內機4', '室內機5', '室內機6', '室內機7', '備註'];
+var PS_LINK_COLUMNS = ['圖片網址', '圖片網址2', '圖片網址3', '圖片網址4', '連結', '影片網址'];
+var PS_DEBOUNCE_MS = 2 * 60 * 1000;   // 修改後等 2 分鐘再同步（期間的修改合併）
+var PS_SCHEDULE_MINUTES = 15;          // 定期檢查
 
 // ---------------------------------------------------------------------------
 // 選單
 // ---------------------------------------------------------------------------
-function onOpen() {
+function productSyncOnOpen() {
   SpreadsheetApp.getUi()
     .createMenu('LG 產品同步')
-    .addItem('立即同步', 'menuSyncNow')
-    .addItem('差異檢查（只預覽，不寫入）', 'menuPreview')
-    .addItem('完整重新同步', 'menuFullSync')
+    .addItem('立即同步', 'productSyncNow')
+    .addItem('差異檢查（只預覽，不寫入）', 'productSyncPreview')
+    .addItem('完整重新同步', 'productSyncFull')
     .addSeparator()
-    .addItem('查看上次同步結果', 'menuShowLast')
-    .addItem('安裝／重設自動同步', 'setup')
+    .addItem('查看上次同步結果', 'productSyncShowLast')
+    .addItem('安裝／重設自動同步', 'productSyncSetup')
     .addToUi();
 }
 
-function menuSyncNow() { showResult_(runSync_('manual', 'sync', false)); }
-function menuPreview() { showResult_(runSync_('preview', 'preview', false)); }
-function menuFullSync() {
+function productSyncNow() { productSyncShow_(productSyncRun_('manual', 'sync', false)); }
+function productSyncPreview() { productSyncShow_(productSyncRun_('preview', 'preview', false)); }
+function productSyncFull() {
   var ui = SpreadsheetApp.getUi();
   var ans = ui.alert('完整重新同步',
     '會重新送出全部產品資料。\n\n若產品數量大幅減少（例如刪除了很多列），一般同步會被保護機制拒絕；完整重新同步會「強制套用」。\n\n確定要繼續嗎？',
     ui.ButtonSet.OK_CANCEL);
   if (ans !== ui.Button.OK) return;
-  showResult_(runSync_('full', 'full', true));
+  productSyncShow_(productSyncRun_('full', 'full', true));
 }
-function menuShowLast() {
-  var last = PropertiesService.getScriptProperties().getProperty('LAST_RESULT');
+function productSyncShowLast() {
+  var last = PropertiesService.getScriptProperties().getProperty('PRODUCT_SYNC_LAST_RESULT');
   SpreadsheetApp.getUi().alert('上次同步結果', last || '尚未同步過', SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 // ---------------------------------------------------------------------------
 // 安裝觸發器
 // ---------------------------------------------------------------------------
-function setup() {
+function productSyncSetup() {
   var props = PropertiesService.getScriptProperties();
-  ['SYNC_URL', 'SYNC_SECRET'].forEach(function (k) {
+  ['PRODUCT_SYNC_URL', 'PRODUCT_SYNC_SECRET'].forEach(function (k) {
     if (!props.getProperty(k)) throw new Error('請先在「專案設定 → 指令碼屬性」設定 ' + k);
   });
   var ss = SpreadsheetApp.getActive();
   ScriptApp.getProjectTriggers().forEach(function (t) {
     var f = t.getHandlerFunction();
-    if (['onSheetEdit', 'onSheetChange', 'scheduledSync', 'debouncedSync'].indexOf(f) >= 0) ScriptApp.deleteTrigger(t);
+    if (['productSyncOnOpen', 'productSyncOnEdit', 'productSyncOnChange', 'productSyncScheduled', 'productSyncDebounced'].indexOf(f) >= 0) ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('onSheetEdit').forSpreadsheet(ss).onEdit().create();
-  ScriptApp.newTrigger('onSheetChange').forSpreadsheet(ss).onChange().create();
-  ScriptApp.newTrigger('scheduledSync').timeBased().everyMinutes(SCHEDULE_MINUTES).create();
-  var r = runSync_('manual', 'sync', false);
+  ScriptApp.newTrigger('productSyncOnOpen').forSpreadsheet(ss).onOpen().create();
+  ScriptApp.newTrigger('productSyncOnEdit').forSpreadsheet(ss).onEdit().create();
+  ScriptApp.newTrigger('productSyncOnChange').forSpreadsheet(ss).onChange().create();
+  ScriptApp.newTrigger('productSyncScheduled').timeBased().everyMinutes(PS_SCHEDULE_MINUTES).create();
+  var r = productSyncRun_('manual', 'sync', false);
   try {
-    SpreadsheetApp.getUi().alert('自動同步已安裝', '修改「報價」「一對多報價」後約 2 分鐘自動同步，另外每 15 分鐘定期檢查。\n\n首次同步結果：\n' + summary_(r), SpreadsheetApp.getUi().ButtonSet.OK);
+    SpreadsheetApp.getUi().alert('自動同步已安裝', '修改「報價」「一對多報價」後約 2 分鐘自動同步，另外每 15 分鐘定期檢查。\n\n首次同步結果：\n' + productSyncSummary_(r), SpreadsheetApp.getUi().ButtonSet.OK);
   } catch (e) { /* 從編輯器執行時沒有 UI */ }
 }
 
 // ---------------------------------------------------------------------------
 // 觸發：修改（防抖）與定期
 // ---------------------------------------------------------------------------
-function onSheetEdit(e) {
+function productSyncOnEdit(e) {
   var name = e && e.range ? e.range.getSheet().getName() : '';
-  if (name && name !== PRODUCT_SHEET && name !== MULTI_SPLIT_SHEET) return; // 其他工作表的修改不觸發
-  scheduleDebounced_();
+  if (name && name !== PS_PRODUCT_SHEET && name !== PS_MULTI_SPLIT_SHEET) return; // 其他工作表的修改不觸發
+  productSyncSchedule_();
 }
-function onSheetChange(e) {
+function productSyncOnChange(e) {
   // 新增／刪除列或欄、貼上等結構性變更（事件不提供工作表名稱，交給雜湊判斷是否真的有變）
   if (e && e.changeType === 'FORMAT') return;
-  scheduleDebounced_();
+  productSyncSchedule_();
 }
-function scheduleDebounced_() {
+function productSyncSchedule_() {
   var props = PropertiesService.getScriptProperties();
-  props.setProperty('PENDING_AT', String(Date.now()));
-  var exists = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'debouncedSync'; });
-  if (!exists) ScriptApp.newTrigger('debouncedSync').timeBased().after(DEBOUNCE_MS).create();
+  props.setProperty('PRODUCT_SYNC_PENDING_AT', String(Date.now()));
+  var exists = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'productSyncDebounced'; });
+  if (!exists) ScriptApp.newTrigger('productSyncDebounced').timeBased().after(PS_DEBOUNCE_MS).create();
 }
-function debouncedSync() {
+function productSyncDebounced() {
   var props = PropertiesService.getScriptProperties();
-  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'debouncedSync') ScriptApp.deleteTrigger(t); });
-  var pending = Number(props.getProperty('PENDING_AT') || 0);
-  var wait = DEBOUNCE_MS - (Date.now() - pending);
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'productSyncDebounced') ScriptApp.deleteTrigger(t); });
+  var pending = Number(props.getProperty('PRODUCT_SYNC_PENDING_AT') || 0);
+  var wait = PS_DEBOUNCE_MS - (Date.now() - pending);
   if (wait > 10 * 1000) { // 這段時間內還有新的修改 → 再等一下
-    ScriptApp.newTrigger('debouncedSync').timeBased().after(wait).create();
+    ScriptApp.newTrigger('productSyncDebounced').timeBased().after(wait).create();
     return;
   }
-  props.deleteProperty('PENDING_AT');
-  runSync_('edit', 'sync', false);
+  props.deleteProperty('PRODUCT_SYNC_PENDING_AT');
+  productSyncRun_('edit', 'sync', false);
 }
-function scheduledSync() { runSync_('schedule', 'sync', false); }
+function productSyncScheduled() { productSyncRun_('schedule', 'sync', false); }
 
 // ---------------------------------------------------------------------------
 // 同步主流程
 // ---------------------------------------------------------------------------
-function runSync_(trigger, mode, force) {
+function productSyncRun_(trigger, mode, force) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(30 * 1000)) return { status: 'skipped', error: '已有同步正在進行，稍後會自動再試' };
   try {
     var props = PropertiesService.getScriptProperties();
-    var url = props.getProperty('SYNC_URL');
-    var secret = props.getProperty('SYNC_SECRET');
-    if (!url || !secret) throw new Error('尚未設定 SYNC_URL 或 SYNC_SECRET');
-    var dataset = props.getProperty('DATASET') || 'production';
+    var url = props.getProperty('PRODUCT_SYNC_URL');
+    var secret = props.getProperty('PRODUCT_SYNC_SECRET');
+    if (!url || !secret) throw new Error('尚未設定 PRODUCT_SYNC_URL 或 PRODUCT_SYNC_SECRET');
+    var dataset = props.getProperty('PRODUCT_SYNC_DATASET') || 'production';
     var ss = SpreadsheetApp.getActive();
 
-    var products = readWhitelisted_(ss, PRODUCT_SHEET, PRODUCT_COLUMNS, '產品型號');
-    var multi = readWhitelisted_(ss, MULTI_SPLIT_SHEET, MULTI_SPLIT_COLUMNS, '室外機型號');
-    var localHash = md5_(JSON.stringify([dataset, products, multi]));
+    var products = productSyncRead_(ss, PS_PRODUCT_SHEET, PS_PRODUCT_COLUMNS, '產品型號');
+    var multi = productSyncRead_(ss, PS_MULTI_SPLIT_SHEET, PS_MULTI_SPLIT_COLUMNS, '室外機型號');
+    var localHash = productSyncMd5_(JSON.stringify([dataset, products, multi]));
 
     // 定期／修改觸發：資料沒變就不呼叫伺服器（手動、完整、預覽一律送出）
-    if ((trigger === 'schedule' || trigger === 'edit') && localHash === props.getProperty('LAST_SENT_HASH')) {
+    if ((trigger === 'schedule' || trigger === 'edit') && localHash === props.getProperty('PRODUCT_SYNC_LAST_HASH')) {
       return { status: 'unchanged_local' };
     }
 
@@ -135,18 +138,18 @@ function runSync_(trigger, mode, force) {
       spreadsheet_id: ss.getId(), sent_at: new Date().toISOString(),
       products: { rows: products }, multi_split: { rows: multi }
     });
-    var res = postSigned_(url, secret, body);
+    var res = productSyncPost_(url, secret, body);
     var result = res.body || {};
     result.http = res.code;
     if (res.code === 200 && (result.status === 'success' || result.status === 'unchanged')) {
-      props.setProperty('LAST_SENT_HASH', localHash); // 只有成功才記錄；失敗時下次定期同步會自動重試
+      props.setProperty('PRODUCT_SYNC_LAST_HASH', localHash); // 只有成功才記錄；失敗時下次定期同步會自動重試
     }
-    props.setProperty('LAST_RESULT', new Date().toLocaleString('zh-TW') + '（' + trigger + '）\n' + summary_(result));
+    props.setProperty('PRODUCT_SYNC_LAST_RESULT', new Date().toLocaleString('zh-TW') + '（' + trigger + '）\n' + productSyncSummary_(result));
     if (res.code !== 200) console.error('同步失敗', res.code, JSON.stringify(result));
     return result;
   } catch (err) {
     var msg = String(err && err.message || err);
-    PropertiesService.getScriptProperties().setProperty('LAST_RESULT', new Date().toLocaleString('zh-TW') + '（' + trigger + '）\n失敗：' + msg);
+    PropertiesService.getScriptProperties().setProperty('PRODUCT_SYNC_LAST_RESULT', new Date().toLocaleString('zh-TW') + '（' + trigger + '）\n失敗：' + msg);
     console.error(msg);
     return { status: 'failed', error: msg };
   } finally {
@@ -155,7 +158,7 @@ function runSync_(trigger, mode, force) {
 }
 
 /** 依欄位標題只讀取白名單欄；找不到的欄位視為空白 */
-function readWhitelisted_(ss, sheetName, columns, keyColumn) {
+function productSyncRead_(ss, sheetName, columns, keyColumn) {
   var sh = ss.getSheetByName(sheetName);
   if (!sh) throw new Error('找不到工作表「' + sheetName + '」');
   var lastRow = sh.getLastRow();
@@ -169,7 +172,7 @@ function readWhitelisted_(ss, sheetName, columns, keyColumn) {
     if (idx < 0) return;
     var rng = sh.getRange(2, idx + 1, n, 1); // 只讀這一欄
     var vals = rng.getDisplayValues();
-    if (LINK_COLUMNS.indexOf(c) >= 0) {
+    if (PS_LINK_COLUMNS.indexOf(c) >= 0) {
       var rich = rng.getRichTextValues();
       vals = vals.map(function (v, i) {
         var link = rich[i][0] && rich[i][0].getLinkUrl();
@@ -192,13 +195,13 @@ function readWhitelisted_(ss, sheetName, columns, keyColumn) {
   return rows;
 }
 
-function postSigned_(url, secret, body) {
+function productSyncPost_(url, secret, body) {
   var lastErr;
   for (var attempt = 1; attempt <= 3; attempt++) {
     try {
       var ts = String(Date.now());
       var rid = Utilities.getUuid();
-      var sig = hex_(Utilities.computeHmacSha256Signature(ts + '.' + rid + '.' + body, secret, Utilities.Charset.UTF_8));
+      var sig = productSyncHex_(Utilities.computeHmacSha256Signature(ts + '.' + rid + '.' + body, secret, Utilities.Charset.UTF_8));
       var res = UrlFetchApp.fetch(url, {
         method: 'post',
         contentType: 'application/json; charset=utf-8',
@@ -219,7 +222,7 @@ function postSigned_(url, secret, body) {
   throw new Error('連線失敗（已重試 3 次）：' + lastErr);
 }
 
-function summary_(r) {
+function productSyncSummary_(r) {
   if (!r) return '';
   var s = { success: '成功', unchanged: '資料沒有變更', unchanged_local: '資料沒有變更（未送出）', preview: '差異預覽', rejected: '已拒絕（保護機制）', failed: '失敗', skipped: '略過' }[r.status] || r.status;
   var lines = ['狀態：' + s];
@@ -235,6 +238,6 @@ function summary_(r) {
   if (r.error) lines.push('原因：' + r.error);
   return lines.join('\n');
 }
-function showResult_(r) { SpreadsheetApp.getUi().alert('LG 產品同步', summary_(r), SpreadsheetApp.getUi().ButtonSet.OK); }
-function hex_(bytes) { return bytes.map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join(''); }
-function md5_(s) { return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)); }
+function productSyncShow_(r) { SpreadsheetApp.getUi().alert('LG 產品同步', productSyncSummary_(r), SpreadsheetApp.getUi().ButtonSet.OK); }
+function productSyncHex_(bytes) { return bytes.map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join(''); }
+function productSyncMd5_(s) { return productSyncHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8)); }
