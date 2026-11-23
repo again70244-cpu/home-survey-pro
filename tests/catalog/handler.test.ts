@@ -104,7 +104,15 @@ describe('product-sync Edge Function', () => {
     const sent = JSON.stringify(calls.find((c) => c.fn === 'catalog_apply_snapshot')!.body)
     expect(sent).not.toMatch(/99999|11900|\$/)
     expect(sent).toContain('LSN22DDHST')
+    expect(out.review).toEqual([])
   })
+  it('回傳待確認明細（型號、列號、原因）', async () => {
+    const b = goodBody({ mode: 'preview' })
+    b.products.rows.push({ row: 7, values: { 產品型號: 'WD-X1 x', 分類: '洗衣機', 安裝尺寸: '寬70;高189;深83\n底座需墊高' } })
+    const out = await (await handle(await signed(b), env, fakeFetch)).json()
+    expect(out.review).toEqual([{ row: 7, model: 'WD-X1', quality: 'needs_review', issues: ['無法辨識的內容（原文保留，需人工確認）：底座需墊高'] }])
+  })
+
   it('相同資料再送一次 → unchanged（冪等）', async () => {
     if (!db) return
     const res = await handle(await signed(goodBody()), env, fakeFetch)

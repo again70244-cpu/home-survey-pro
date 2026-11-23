@@ -234,6 +234,12 @@ function productSyncSummary_(r) {
     if (d.updated.length) lines.push('將更新：' + d.updated.slice(0, 20).join('、'));
     if (d.deactivated.length) lines.push('將停用：' + d.deactivated.slice(0, 20).join('、'));
   }
+  if (r.review && r.review.length) {
+    lines.push('\n待確認／無法解析（' + r.review.length + ' 筆）：');
+    r.review.slice(0, 25).forEach(function (x) { lines.push('第 ' + x.row + ' 列 ' + x.model + '：' + x.issues.join('；')); });
+    if (r.review.length > 25) lines.push('…其餘 ' + (r.review.length - 25) + ' 筆請看執行記錄');
+    console.log(JSON.stringify(r.review));
+  }
   if (r.warnings && r.warnings.length) lines.push('警告：\n- ' + r.warnings.slice(0, 10).join('\n- '));
   if (r.error) lines.push('原因：' + r.error);
   return lines.join('\n');

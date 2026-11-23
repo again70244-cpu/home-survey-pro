@@ -101,7 +101,11 @@ export async function handle(req: Request, env: Env, fetchImpl: typeof fetch = f
       return json(502, { status: 'failed', error: '寫入資料庫失敗，既有資料未變更', detail: err.slice(0, 500) })
     }
     const result = await res.json()
-    return json(200, { ...result, warnings: t.warnings, skipped_rows: t.skippedRows })
+    // 待確認／無法解析的明細（只回傳給呼叫端顯示，不另外儲存）
+    const review = t.products
+      .filter((p) => p.data_quality === 'needs_review' || p.data_quality === 'invalid')
+      .map((p) => ({ row: p.source_row, model: p.model_code, quality: p.data_quality, issues: p.parse_issues.map((i) => (i.line ? `${i.message}：${i.line}` : i.message)) }))
+    return json(200, { ...result, warnings: t.warnings, skipped_rows: t.skippedRows, review })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     if (e instanceof ForbiddenColumnError || e instanceof BadRequest || e instanceof SyntaxError) {

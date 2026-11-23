@@ -440,7 +440,8 @@ async function handle(req, env, fetchImpl = fetch, now = Date.now()) {
       return json(502, { status: "failed", error: "\u5BEB\u5165\u8CC7\u6599\u5EAB\u5931\u6557\uFF0C\u65E2\u6709\u8CC7\u6599\u672A\u8B8A\u66F4", detail: err.slice(0, 500) });
     }
     const result = await res.json();
-    return json(200, { ...result, warnings: t.warnings, skipped_rows: t.skippedRows });
+    const review = t.products.filter((p) => p.data_quality === "needs_review" || p.data_quality === "invalid").map((p) => ({ row: p.source_row, model: p.model_code, quality: p.data_quality, issues: p.parse_issues.map((i) => i.line ? `${i.message}\uFF1A${i.line}` : i.message) }));
+    return json(200, { ...result, warnings: t.warnings, skipped_rows: t.skippedRows, review });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (e instanceof ForbiddenColumnError || e instanceof BadRequest || e instanceof SyntaxError) {
