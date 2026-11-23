@@ -29,6 +29,8 @@ export interface ShotItem {
   key: string
   label: string
   hint: string
+  /** 只有符合條件時才需要拍（例如需要接進水管才拍水源） */
+  when?: (values: Record<string, string | number | null | undefined>) => boolean
 }
 
 const YES_NO_UNSURE = [

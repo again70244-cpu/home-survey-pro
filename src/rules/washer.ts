@@ -8,39 +8,15 @@
 import type { SurveyArea, SurveyProduct } from '../db/types'
 import { SPEC_LABELS } from '../../supabase/functions/_shared/catalog/installText.ts'
 import { WASHER_CLEARANCE, WASHER_SECTIONS, WASHER_SHOTS, isWasherCategory } from '../templates/washer'
+import { fmt, num, specOf, type RuleInput } from './common'
 import { countLevels, sortFindings, type CheckResult, type Finding, type RiskLevel } from './types'
 
 export const WASHER_RULES_ID = 'washer'
 export const WASHER_RULES_VERSION = 1
 const RV = `規則 washer v${WASHER_RULES_VERSION}`
 
-export type TemplateValues = Record<string, string | number | null | undefined>
-
-export interface WasherInput {
-  values: TemplateValues
-  /** 使用者指定的安裝位置區域；null = 自動判斷 */
-  installAreaId: string | null
-  areas: SurveyArea[]
-  products: SurveyProduct[]
-  /** 已有照片的拍攝項目 key */
-  shotsTaken: Set<string>
-}
-
-type Spec = { model: string; get: (f: string) => number | null }
-
-function specOf(p: SurveyProduct): Spec {
-  const s = p.spec_snapshot as Record<string, unknown>
-  return {
-    model: p.model_code,
-    get: (f) => {
-      const v = s?.[`${f}_cm`] // 產品知識庫欄位名稱一律以 _cm 結尾
-      return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null
-    },
-  }
-}
-
-const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : null)
-const fmt = (n: number) => `${Math.round(n * 10) / 10} cm`
+export type { TemplateValues } from './common'
+export type WasherInput = RuleInput
 
 /** 安裝位置：使用者指定 → 名稱含「安裝位置」→ 陽台 */
 export function pickInstallArea(areas: SurveyArea[], installAreaId: string | null): SurveyArea | null {

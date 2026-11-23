@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { addPhoto, saveTemplate, templateRowId, updatePhotoCaption } from '../db/repo'
-import type { SurveyArea } from '../db/types'
+import { addArea, addPhoto, saveTemplate, templateRowId, updatePhotoCaption } from '../db/repo'
 import { compressImage } from '../lib/image'
-import { WASHER_SECTIONS, WASHER_SHOTS, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERSION, type ShotItem, type TemplateField } from '../templates/washer'
-import { checkWasher, pickInstallArea, washerProducts, type TemplateValues } from '../rules/washer'
+import type { ShotItem, TemplateField } from '../templates/washer'
+import { matchingProducts, TEMPLATES, type TemplateDef } from '../templates'
 import { RISK_LABEL, type CheckResult, type Finding, type RiskLevel } from '../rules/types'
 import { Button, Icon } from './ui'
 import { useToast } from './Toast'
@@ -17,17 +16,8 @@ export const LEVEL_STYLE: Record<RiskLevel, string> = {
   info: 'border-line bg-white text-[#555]',
 }
 
-/** 只有「有」時才需要填距離 */
-const SHOW_IF: Record<string, (v: TemplateValues) => boolean> = {
-  faucet_distance_cm: (v) => v.faucet === 'yes',
-  drain_distance_cm: (v) => v.drain_type === 'floor' || v.drain_type === 'wall',
-  outlet_distance_cm: (v) => v.outlet === 'yes',
-  outlet_grounded: (v) => v.outlet === 'yes',
-  dedicated_circuit: (v) => v.outlet === 'yes',
-}
-
-/** 載入洗衣機檢查需要的資料，並計算結果（報告頁也共用） */
-export async function loadWasherCheck(surveyId: string, id: string) {
+/** 載入模板檢查需要的資料，並計算結果（報告頁也共用）；id = templateRowId(surveyId, def.id) */
+export async function loadTemplateCheck(def: TemplateDef, surveyId: string, id: string) {
   const [tpl, areasAll, products, photos] = await Promise.all([
     db.survey_templates.get(id),
     db.survey_areas.where('survey_id').equals(surveyId).toArray(),
@@ -37,13 +27,14 @@ export async function loadWasherCheck(surveyId: string, id: string) {
   const areas = areasAll.filter((a) => !a.deleted_at).sort((a, b) => a.sort_order - b.sort_order)
   const live = products.filter((p) => !p.deleted_at)
   const activeTpl = tpl && !tpl.deleted_at ? tpl : null
-  const active = !!activeTpl || washerProducts(live).length > 0
+  const hasProduct = matchingProducts(def, live).length > 0
+  const active = !!activeTpl || hasProduct
   const areaIds = new Set(areas.map((a) => a.id))
   const shotsTaken = new Set(photos.filter((p) => !p.deleted_at && p.shot_key && areaIds.has(p.area_id)).map((p) => p.shot_key!))
   const values = activeTpl?.values ?? {}
   const installAreaId = activeTpl?.install_area_id ?? null
-  const result = active ? checkWasher({ values, installAreaId, areas, products: live, shotsTaken }) : null
-  return { active, values, installAreaId, areas, shotsTaken, result, installArea: pickInstallArea(areas, installAreaId), hasWasher: washerProducts(live).length > 0 }
+  const result = active ? def.check({ values, installAreaId, areas, products: live, shotsTaken }) : null
+  return { active, values, installAreaId, areas, shotsTaken, result, installArea: def.pickArea(areas, installAreaId), hasProduct }
 }
 
 function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown; onChange: (v: string | null) => void }) {
@@ -136,33 +127,26 @@ export function ResultSummary({ r }: { r: CheckResult }) {
   )
 }
 
-/** 拍攝項目應拍在哪個區域：電梯樓梯 → 電梯或樓梯區域；搬運路線 → 第一個非安裝位置的區域；其餘 → 安裝位置 */
-function areaForShot(shot: ShotItem, areas: SurveyArea[], install: SurveyArea | null): SurveyArea | null {
-  if (shot.key === 'elevator_stairs') return areas.find((a) => a.kind === 'elevator') ?? areas.find((a) => a.kind === 'stairs') ?? install
-  if (shot.key === 'route') return areas.find((a) => a.id !== install?.id && a.kind === 'other') ?? install
-  return install
-}
-
-/** 場勘頁「洗衣機現場檢查」區塊 */
-export function WasherCheck({ surveyId }: { surveyId: string }) {
+/** 場勘頁的模板檢查區塊（洗衣機、冰箱…） */
+export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
   const toast = useToast()
   // 模板資料列 ID 需用 crypto 計算，先算好再交給 liveQuery（liveQuery 內只放 Dexie 查詢）
   const [tplId, setTplId] = useState<string | null>(null)
-  useEffect(() => void templateRowId(surveyId, WASHER_TEMPLATE_ID).then(setTplId), [surveyId])
-  const data = useLiveQuery(() => (tplId ? loadWasherCheck(surveyId, tplId) : undefined), [surveyId, tplId])
+  useEffect(() => void templateRowId(surveyId, def.id).then(setTplId), [surveyId])
+  const data = useLiveQuery(() => (tplId ? loadTemplateCheck(def, surveyId, tplId) : undefined), [def, surveyId, tplId])
   const fileRef = useRef<HTMLInputElement>(null)
   const pendingShot = useRef<ShotItem | null>(null)
   const [busy, setBusy] = useState(false)
   const [showAll, setShowAll] = useState(false)
   if (!data) return null
   const save = (patch: Parameters<typeof saveTemplate>[3]) =>
-    saveTemplate(surveyId, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERSION, patch).catch((e) => toast(`儲存失敗：${e instanceof Error ? e.message : e}`))
+    saveTemplate(surveyId, def.id, def.version, patch).catch((e) => toast(`儲存失敗：${e instanceof Error ? e.message : e}`))
 
   if (!data.active)
     return (
-      <section className="border-t border-line py-4" aria-label="洗衣機現場檢查">
+      <section className="border-t border-line py-4" aria-label={def.title}>
         <button className="text-[13px] text-ink underline underline-offset-4" onClick={() => void save({})}>
-          啟用洗衣機／洗衣塔現場檢查
+          {def.enableLabel}
         </button>
       </section>
     )
@@ -173,7 +157,7 @@ export function WasherCheck({ surveyId }: { surveyId: string }) {
   async function onShotFile(files: FileList | null) {
     const shot = pendingShot.current
     if (!files?.length || !shot) return
-    const area = areaForShot(shot, areas, installArea)
+    const area = def.shotArea(shot, areas, installArea)
     if (!area) return toast('請先新增場勘區域')
     setBusy(true)
     try {
@@ -190,14 +174,15 @@ export function WasherCheck({ surveyId }: { surveyId: string }) {
   }
 
   const findings = r!.findings
+  const shots = def.shots.filter((s) => s.when?.(v) ?? true)
   const visible = showAll ? findings : findings.filter((f) => f.level !== 'info')
   return (
-    <section className="border-t border-line py-5" aria-label="洗衣機現場檢查">
+    <section className="border-t border-line py-5" aria-label={def.title}>
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xs font-medium tracking-[0.18em] text-sub">洗衣機現場檢查</h2>
-        <span className="text-[13px] tabular-nums text-ink" data-testid="washer-score">完成度 {r!.score.percent}%</span>
+        <h2 className="text-xs font-medium tracking-[0.18em] text-sub">{def.title}</h2>
+        <span className="text-[13px] tabular-nums text-ink" data-testid={`${def.id}-score`}>完成度 {r!.score.percent}%</span>
       </div>
-      {!data.hasWasher && <p className="mt-2 text-xs text-sub">尚未選擇洗衣機產品，選擇後會自動比對規格。</p>}
+      {!data.hasProduct && <p className="mt-2 text-xs text-sub">{def.noProductHint}</p>}
 
       {/* 檢查結果 */}
       <div className="mt-3">
@@ -212,14 +197,14 @@ export function WasherCheck({ surveyId }: { surveyId: string }) {
             {showAll ? '隱藏一般提醒' : `顯示一般提醒（${r!.counts.info}）`}
           </button>
         )}
-        <p className="mt-2 text-[11px] text-sub">規則版本 washer v{r!.rulesVersion}・預留標準：左右各 2 cm、後方 10 cm・僅供提醒，請以現場判斷為準</p>
+        <p className="mt-2 text-[11px] text-sub">{def.note}・僅供提醒，請以現場判斷為準</p>
       </div>
 
       {/* 安裝位置 */}
       <div className="mt-5 space-y-1">
-        <label className="block text-[13px] text-ink" htmlFor="washer-install-area">安裝位置（使用該區域的寬深高）</label>
+        <label className="block text-[13px] text-ink" htmlFor={`${def.id}-install-area`}>安裝位置（使用該區域的寬深高）</label>
         <select
-          id="washer-install-area"
+          id={`${def.id}-install-area`}
           value={installArea?.id ?? ''}
           onChange={(e) => void save({ install_area_id: e.target.value || null })}
           className="block h-11 w-full border border-line bg-white px-2 text-[15px]"
@@ -232,15 +217,28 @@ export function WasherCheck({ surveyId }: { surveyId: string }) {
           ))}
         </select>
         <p className="text-xs text-sub">其他有量寬度的區域會當作搬運路線檢查（大門、走廊、電梯、樓梯）。</p>
+        {!installArea && def.installAreaName && (
+          <Button
+            variant="secondary"
+            className="mt-2 w-full"
+            onClick={async () => {
+              const id = await addArea(surveyId, 'other', def.installAreaName!)
+              await save({ install_area_id: id })
+              document.getElementById(`area-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+          >
+            {Icon.plus} 新增「{def.installAreaName}」區域
+          </Button>
+        )}
       </div>
 
       {/* 模板欄位 */}
       <div className="mt-5 space-y-6">
-        {WASHER_SECTIONS.map((sec) => (
+        {def.sections.map((sec) => (
           <div key={sec.title}>
             <h3 className="mb-2 border-b border-ink pb-1 text-[13px] font-medium tracking-[0.08em]">{sec.title}</h3>
             <div className="space-y-4">
-              {sec.fields.filter((f) => SHOW_IF[f.key]?.(v) ?? true).map((f) =>
+              {sec.fields.filter((f) => def.showIf[f.key]?.(v) ?? true).map((f) =>
                 f.type === 'choice' ? (
                   <ChoiceField key={f.key} f={f} value={v[f.key]} onChange={(x) => set(f.key, x)} />
                 ) : (
@@ -256,10 +254,10 @@ export function WasherCheck({ surveyId }: { surveyId: string }) {
       <div className="mt-6">
         <h3 className="mb-2 flex items-baseline justify-between border-b border-ink pb-1 text-[13px] font-medium tracking-[0.08em]">
           <span>拍攝清單</span>
-          <span className="font-normal tabular-nums text-sub">{WASHER_SHOTS.filter((s) => data.shotsTaken.has(s.key)).length} / {WASHER_SHOTS.length}</span>
+          <span className="font-normal tabular-nums text-sub">{shots.filter((s) => data.shotsTaken.has(s.key)).length} / {shots.length}</span>
         </h3>
         <ul className="divide-y divide-line">
-          {WASHER_SHOTS.map((s) => {
+          {shots.map((s) => {
             const done = data.shotsTaken.has(s.key)
             return (
               <li key={s.key} className="flex items-center gap-3 py-2" data-shot={s.key} data-done={done ? 1 : 0}>
@@ -288,5 +286,16 @@ export function WasherCheck({ surveyId }: { surveyId: string }) {
         <p className="mt-2 text-xs text-sub">照片會存到對應的區域，並自動填上說明。</p>
       </div>
     </section>
+  )
+}
+
+/** 場勘頁所有模板檢查（洗衣機、冰箱…） */
+export function TemplateChecks({ surveyId }: { surveyId: string }) {
+  return (
+    <>
+      {TEMPLATES.map((d) => (
+        <TemplateCheck key={d.id} def={d} surveyId={surveyId} />
+      ))}
+    </>
   )
 }

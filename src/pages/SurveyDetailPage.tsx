@@ -7,7 +7,7 @@ import { formatDate } from '../lib/format'
 import { surveySummary } from '../lib/completeness'
 import { AreaList, CompletenessCard } from '../components/AreaList'
 import { SurveyProducts } from '../components/SurveyProducts'
-import { WasherCheck } from '../components/WasherCheck'
+import { TemplateChecks } from '../components/TemplateCheck'
 import { BottomBar, Button, Card, Icon, IconButton, PageTitle, SectionLabel, TextButton, TopBar } from '../components/ui'
 import { RowSync } from '../components/SyncBadge'
 import { SyncStatusBar } from '../components/SyncStatusBar'
@@ -84,7 +84,7 @@ export function SurveyDetailPage() {
         </div>
         <CompletenessCard sum={sum} />
         <SurveyProducts surveyId={s.id} />
-        <WasherCheck surveyId={s.id} />
+        <TemplateChecks surveyId={s.id} />
         <AreaList surveyId={s.id} sum={sum} />
         <Card className="mt-6">
           <SectionLabel right={<RowSync row={s} hasConflict={conflict} />}>場勘資料</SectionLabel>

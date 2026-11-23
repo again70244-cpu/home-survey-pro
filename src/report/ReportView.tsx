@@ -145,10 +145,11 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
       )
     }
     case 'check-head': {
-      const r = d.check!
+      const c = d.checks[b.checkIndex]
+      const r = c.result
       return (
         <div>
-          <div style={{ fontSize: 34, fontWeight: 800, color: C.ink }}>洗衣機現場檢查</div>
+          <div style={{ fontSize: 34, fontWeight: 800, color: C.ink }}>{c.title}</div>
           <div style={{ display: 'flex', gap: 12, marginTop: 14 }}>
             {RISK_ORDER.map((l) => (
               <div key={l} style={{ flex: 1, border: `2px solid ${r.counts[l] ? RISK_COLOR[l] : C.line}`, borderRadius: 12, padding: '8px 14px' }}>
@@ -158,14 +159,14 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
             ))}
           </div>
           <div style={{ fontSize: 20, color: C.sub, marginTop: 10 }}>
-            完成度 {r.score.percent}%・規則版本 washer v{r.rulesVersion}・預留標準：左右各 2 cm、後方 10 cm・系統提醒僅供參考，請以現場判斷為準
+            完成度 {r.score.percent}%・{c.note}・系統提醒僅供參考，請以現場判斷為準
           </div>
           {r.findings.length === 0 && <div style={{ fontSize: 24, color: C.ok, marginTop: 12, fontWeight: 700 }}>未發現問題</div>}
         </div>
       )
     }
     case 'finding': {
-      const f = d.check!.findings[b.findingIndex]
+      const f = d.checks[b.checkIndex].result.findings[b.findingIndex]
       return (
         <div style={{ borderLeft: `6px solid ${RISK_COLOR[f.level]}`, background: f.level === 'high' ? '#fef2f2' : C.soft, borderRadius: 8, padding: '12px 18px', lineHeight: 1.45 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>

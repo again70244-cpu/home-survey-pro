@@ -31,14 +31,20 @@ export type Block =
   | { kind: 'summary-head'; key: string }
   | { kind: 'summary-row'; key: string; areaIndex: number }
   | { kind: 'product'; key: string; productIndex: number }
-  | { kind: 'check-head'; key: string }
-  | { kind: 'finding'; key: string; findingIndex: number }
+  | { kind: 'check-head'; key: string; checkIndex: number }
+  | { kind: 'finding'; key: string; checkIndex: number; findingIndex: number }
   | { kind: 'area-head'; key: string; areaIndex: number; startsArea: true }
   | { kind: 'area-cont'; key: string; areaIndex: number }
   | { kind: 'area-notes'; key: string; areaIndex: number; text: string; first: boolean }
   | { kind: 'photo-row'; key: string; areaIndex: number; photos: ReportPhoto[]; height: number }
   | { kind: 'no-photo'; key: string; areaIndex: number }
   | { kind: 'final'; key: string }
+
+export interface ReportCheck {
+  title: string
+  note: string
+  result: CheckResult
+}
 
 export interface ReportData {
   survey: Survey
@@ -47,12 +53,12 @@ export interface ReportData {
   summary: SurveySummary
   /** 場勘選擇的產品（規格以快照為準） */
   products: SurveyProduct[]
-  /** 洗衣機現場檢查結果（未啟用為 null） */
-  check: CheckResult | null
+  /** 已啟用的現場檢查（洗衣機、冰箱…）結果 */
+  checks: ReportCheck[]
   generatedAt: Date
 }
 
-export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = [], check: CheckResult | null = null): ReportData {
+export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = [], checks: ReportCheck[] = []): ReportData {
   const live = photos.filter((p) => !p.deleted_at)
   const photosByArea = new Map<string, ReportPhoto[]>()
   for (const a of areas) {
@@ -62,7 +68,7 @@ export function buildReportData(survey: Survey, areas: SurveyArea[], photos: Sur
       .map((p, i) => ({ id: p.id, url: urls.get(p.id) ?? null, width: p.width ?? 4, height: p.height ?? 3, caption: p.caption, index: i + 1 }))
     photosByArea.set(a.id, list)
   }
-  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products, check }
+  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products, checks }
 }
 
 /** 照片列高度：依照片比例縮放到欄寬，取兩張中較高者，上限 PHOTO_MAX_H（不裁切，object-fit: contain） */
@@ -93,10 +99,10 @@ export function buildBlocks(d: ReportData): Block[] {
   const blocks: Block[] = [{ kind: 'cover', key: 'cover' }, { kind: 'summary-head', key: 'sum-h' }]
   d.areas.forEach((_, i) => blocks.push({ kind: 'summary-row', key: `sum-${i}`, areaIndex: i }))
   d.products.forEach((_, i) => blocks.push({ kind: 'product', key: `prod-${i}`, productIndex: i }))
-  if (d.check) {
-    blocks.push({ kind: 'check-head', key: 'chk-h' })
-    d.check.findings.forEach((_, i) => blocks.push({ kind: 'finding', key: `chk-${i}`, findingIndex: i }))
-  }
+  d.checks.forEach((c, ci) => {
+    blocks.push({ kind: 'check-head', key: `chk-h-${ci}`, checkIndex: ci })
+    c.result.findings.forEach((_, i) => blocks.push({ kind: 'finding', key: `chk-${ci}-${i}`, checkIndex: ci, findingIndex: i }))
+  })
   d.areas.forEach((a, i) => {
     blocks.push({ kind: 'area-head', key: `ah-${i}`, areaIndex: i, startsArea: true })
     if (a.notes) splitNotes(a.notes).forEach((t, k) => blocks.push({ kind: 'area-notes', key: `an-${i}-${k}`, areaIndex: i, text: t, first: k === 0 }))
