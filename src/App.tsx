@@ -11,6 +11,10 @@ import { ConflictsPage } from './pages/ConflictsPage'
 import { AreaPage } from './pages/AreaPage'
 import { ReportPage } from './pages/ReportPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { CatalogPage } from './pages/CatalogPage'
+import { CatalogProductPage } from './pages/CatalogProductPage'
+import { MultiSplitPage } from './pages/MultiSplitPage'
+import { startCatalogSync } from './catalog/catalogSync'
 import { useEffect } from 'react'
 import { startSync } from './sync/engine'
 
@@ -27,6 +31,7 @@ function AppRoutes() {
   const { loading, session, recovery } = useAuth()
   const userId = session?.user.id
   useEffect(() => (userId ? startSync(userId) : undefined), [userId])
+  useEffect(() => (userId ? startCatalogSync() : undefined), [userId])
   if (loading)
     return <div className="flex min-h-dvh items-center justify-center text-sub">載入中…</div>
 
@@ -52,6 +57,9 @@ function AppRoutes() {
       <Route path="/survey/:id/report" element={<ReportPage />} />
       <Route path="/conflicts" element={<ConflictsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/catalog" element={<CatalogPage />} />
+      <Route path="/catalog/multi-split" element={<MultiSplitPage />} />
+      <Route path="/catalog/:productId" element={<CatalogProductPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

@@ -40,6 +40,12 @@ export default defineConfig({
         // Google 字型：第一次載入後快取，離線也能顯示同樣字體
         runtimeCaching: [
           {
+            // 產品圖片（Google Sheets 中的圖片網址）：看過一次即可離線顯示
+            urlPattern: /^https:\/\/i\.ibb\.co\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'product-images', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
             handler: 'CacheFirst',
             options: { cacheName: 'google-fonts', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },

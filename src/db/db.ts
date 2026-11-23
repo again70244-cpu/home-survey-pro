@@ -8,6 +8,7 @@ import type {
   SurveyArea,
   SurveyPhoto,
 } from './types'
+import type { CatalogProduct, CatalogSystem } from '../catalog/types'
 
 export class SurveyDB extends Dexie {
   surveys!: EntityTable<Survey, 'id'>
@@ -17,6 +18,9 @@ export class SurveyDB extends Dexie {
   outbox!: EntityTable<OutboxItem, 'key'>
   conflicts!: EntityTable<ConflictItem, 'key'>
   meta!: EntityTable<MetaItem, 'key'>
+  /** 產品知識庫快取（唯讀；離線時使用最後一次下載的資料） */
+  catalog_products!: EntityTable<CatalogProduct, 'id'>
+  catalog_systems!: EntityTable<CatalogSystem, 'id'>
 
   constructor() {
     super('home-survey-pro')
@@ -28,6 +32,11 @@ export class SurveyDB extends Dexie {
       outbox: 'key, userId, table, createdAt',
       conflicts: 'key, userId',
       meta: 'key',
+    })
+    // v2：只新增產品知識庫快取表，既有資料表與資料完全不變
+    this.version(2).stores({
+      catalog_products: 'id, model_code, category, is_active',
+      catalog_systems: 'id, model_code',
     })
   }
 }

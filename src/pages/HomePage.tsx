@@ -42,6 +42,7 @@ export function HomePage() {
   return (
     <div className="min-h-dvh pb-28">
       <TopBar
+        left={<TextButton onClick={() => nav('/catalog')} aria-label="LG 產品知識庫">產品知識庫</TextButton>}
         right={
           <TextButton onClick={() => nav('/settings')} aria-label="設定">設定</TextButton>
         }
