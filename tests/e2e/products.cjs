@@ -7,8 +7,16 @@ const { chromium, devices } = require('playwright'); const fs = require('fs'); c
 const S = process.argv[2]; const URL = 'http://localhost:4174/'
 const FX = JSON.parse(fs.readFileSync(S + '/p2/fixtures.json', 'utf8'))
 let ok = 0, bad = 0; const check = (c, m) => { c ? ok++ : bad++; console.log(c ? '✅' : '❌', m) }
+const waitCount = async (loc, n, ms = 10000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await loc.count() === n) return true; await new Promise((r) => setTimeout(r, 200)) } return false }
 const seen = (p, t, n = 15000) => p.getByText(t).first().waitFor({ timeout: n }).then(() => true, () => false)
-const synced = (p) => p.getByText(/^雲端已同步・/).first().waitFor({ timeout: 60000 })
+const synced = async (p) => {
+  try { await p.getByText(/^雲端已同步・/).first().waitFor({ timeout: 60000 }) } catch (e) {
+    const out = await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const q = r.result.transaction('outbox').objectStore('outbox').getAll(); q.onsuccess = () => res(q.result.map((x) => [x.table, x.attempts, x.lastError])) } }))
+    console.log('  [同步未完成] 狀態：', (await p.locator('main').innerText()).slice(0, 200).replace(/\n+/g, ' | '))
+    console.log('  [outbox]', JSON.stringify(out).slice(0, 800))
+    throw e
+  }
+}
 const ICON = fs.readFileSync(path.join(__dirname, '../../public/icon-192.png'))
 
 async function device(browser, catalog) {
@@ -27,7 +35,21 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
 ;(async () => {
   const browser = await chromium.launch()
   const catalog = { products: JSON.parse(JSON.stringify(FX.products)), runs: FX.runs }
+  // 產品 ID 對應到正式產品知識庫中同型號的真實 ID（survey_products 有外鍵指向 catalog_products）
+  {
+    const tmp = await browser.newContext(); const tp = await tmp.newPage(); await tp.goto(URL)
+    const live = await tp.evaluate(async ([KEY, PW]) => {
+      const SB = 'https://kmcnowfjzrppntgktyjq.supabase.co'
+      const tok = (await (await fetch(SB + '/auth/v1/token?grant_type=password', { method: 'POST', headers: { apikey: KEY, 'content-type': 'application/json' }, body: JSON.stringify({ email: 'hsp-test-a@example.com', password: PW }) })).json()).access_token
+      return await (await fetch(SB + '/rest/v1/catalog_products?select=id,model_code', { headers: { apikey: KEY, Authorization: 'Bearer ' + tok } })).json()
+    }, [process.env.HSP_ANON_KEY, process.env.HSP_TEST_A_PW])
+    await tmp.close()
+    const byModel = new Map(live.map((x) => [x.model_code, x.id]))
+    for (const x of catalog.products) if (byModel.has(x.model_code)) x.id = byModel.get(x.model_code)
+    console.log('  對應到正式產品 ID：', catalog.products.filter((x) => byModel.has(x.model_code)).length, '/', catalog.products.length)
+  }
   const a = await device(browser, catalog); const p = a.page
+  const warns = []; p.on('console', (m) => warns.push(m.text()))
   const name = '產品選擇測試-' + Date.now().toString().slice(-5)
 
   console.log('— 建立場勘時選擇產品')
@@ -37,10 +59,10 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   await p.getByLabel('搜尋要選擇的產品').fill('s2220b')
   await p.getByRole('button', { name: '選擇 WD-S2220B' }).click()
   await p.getByLabel('搜尋要選擇的產品').fill('25N')
-  check(await p.getByRole('button', { name: /選擇 / }).count() === 0, '搜尋不到的型號沒有結果')
+  check(await waitCount(p.getByRole('dialog').getByRole('button', { name: /^選擇 / }), 0), '搜尋不到的型號沒有結果')
   await p.getByLabel('搜尋要選擇的產品').fill('sd250')
   await p.getByRole('button', { name: '選擇 WT-SD250HB' }).click()
-  await p.getByRole('button', { name: '完成' }).click()
+  await p.getByRole('button', { name: '完成', exact: true }).click()
   check((await p.getByLabel('已選擇的產品').innerText()).includes('WD-S2220B') && (await p.getByLabel('已選擇的產品').innerText()).includes('寬 70・高 189・深 83'), '表單中顯示已選產品與尺寸')
   check(await p.getByLabel('產品型號').inputValue() === 'WD-S2220B', '自動帶入產品型號文字')
   await p.screenshot({ path: S + '/p3-1-form.png', fullPage: true })
@@ -56,10 +78,9 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   await sec.getByRole('button', { name: /從產品知識庫選擇/ }).click()
   await p.getByLabel('搜尋要選擇的產品').fill('lsu22')
   await p.getByRole('button', { name: '選擇 LSU22DHST/LSN22DDHST' }).click()
-  await p.getByRole('button', { name: '選擇 WD-S2220B' }).count() // noop
   await p.getByLabel('搜尋要選擇的產品').fill('s2220b')
   check(await p.getByRole('button', { name: '選擇 WD-S2220B' }).innerText().then((t) => t.includes('已選')), '已選過的產品標示「已選」，不會重複加入')
-  await p.getByRole('button', { name: '完成' }).click()
+  await p.getByRole('button', { name: '完成', exact: true }).click()
   check(await sec.getByText('此產品在試算表中沒有安裝尺寸').count() === 1, '缺少安裝資料的產品：明確提示，不顯示 0')
   await sec.getByRole('button', { name: '移除產品 WT-SD250HB' }).click(); await p.waitForTimeout(300)
   check(await sec.getByRole('listitem', { name: '安裝產品 WT-SD250HB' }).count() === 0, '移除產品')
@@ -82,7 +103,8 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   await p.getByRole('button', { name: '重新整理' }).click(); await p.waitForTimeout(1500)
   await p.getByLabel('搜尋產品型號').fill('S2220B'); await p.getByText('WD-S2220B', { exact: true }).first().click()
   check(/寬\s*71/.test(await p.getByLabel('安裝資訊').innerText()), '產品知識庫已更新為寬 71')
-  await p.goto(URL); await p.getByText(name).first().click(); await p.getByRole('heading', { name }).waitFor()
+  await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
+  await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).waitFor({ timeout: 15000 })
   const old = await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).innerText()
   check(/寬\s*70/.test(old) && !/寬\s*71/.test(old), '舊案件仍是選擇當時的寬 70（快照不變）')
   check(old.includes('產品資料已於') && old.includes('此案件保留選擇當時的規格'), '舊案件提示「產品資料已更新，保留選擇當時的規格」')
@@ -90,8 +112,9 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   const name2 = name + '-新'
   await p.goto(URL); await p.getByRole('button', { name: '新增場勘' }).click(); await p.getByLabel('客戶姓名').fill(name2)
   await p.getByRole('button', { name: /從 LG 產品知識庫選擇/ }).click(); await p.getByLabel('搜尋要選擇的產品').fill('s2220b')
-  await p.getByRole('button', { name: '選擇 WD-S2220B' }).click(); await p.getByRole('button', { name: '完成' }).click()
+  await p.getByRole('button', { name: '選擇 WD-S2220B' }).click(); await p.getByRole('button', { name: '完成', exact: true }).click()
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name: name2 }).waitFor()
+  await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).waitFor({ timeout: 15000 })
   check(/寬\s*71/.test(await p.getByRole('region', { name: '安裝產品' }).innerText()), '新案件選擇同一產品 → 帶入新規格寬 71')
   await synced(p)
   // 雲端也保持各自的快照
@@ -103,11 +126,15 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   check(JSON.stringify(cloud.sort()) === JSON.stringify([['new', 71], ['old', 70]]), '雲端：舊案件快照 70、新案件快照 71 ' + JSON.stringify(cloud))
 
   console.log('— 報告與備份')
-  await p.goto(URL); await p.getByText(name).first().click(); await p.getByRole('heading', { name }).waitFor()
+  await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
   await p.getByRole('button', { name: '產生場勘報告' }).click()
   await p.getByText(/已產生 \d+ 張報告圖片/).waitFor({ timeout: 120000 })
   await p.locator('main ul li img').first().screenshot({ path: S + '/p3-3-report-p1.png' })
-  check(true, '報告產生成功（第 1 頁含安裝產品規格，見截圖）')
+  check(!warns.some((w) => w.includes('[report]')), '報告各頁沒有內容超出版面' + (warns.length ? ' ' + warns.join(';') : ''))
+  const src = await p.locator('main ul li img').first().getAttribute('src')
+  const b64 = await p.evaluate(async (u) => { const b = await (await fetch(u)).blob(); return await new Promise((r) => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1]); f.readAsDataURL(b) }) }, src)
+  fs.writeFileSync(S + '/p3-report-page1.png', Buffer.from(b64, 'base64'))
+  check(true, '報告第 1 頁已輸出（含安裝產品規格，見截圖）')
   await p.goto(URL + '#/settings'); await p.getByRole('heading', { name: '設定' }).waitFor()
   const dl = p.waitForEvent('download', { timeout: 120000 }); await p.getByRole('button', { name: /只匯出資料/ }).click()
   const jf = S + '/p3-backup.json'; await (await dl).saveAs(jf)

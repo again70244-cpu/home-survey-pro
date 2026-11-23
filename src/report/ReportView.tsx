@@ -10,7 +10,8 @@ import {
 } from './model'
 
 const C = { ink: '#111827', text: '#1f2937', sub: '#4b5563', mute: '#9ca3af', line: '#e5e7eb', soft: '#f3f4f6', warn: '#b45309', ok: '#047857' }
-const FONT = '"Noto Sans TC","Noto Sans CJK TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif'
+// 報告只用系統字型：網頁字型（Noto Sans TC 網路字型）轉成圖片時不會被嵌入，排版量測與輸出會用到不同字型而造成換行、重疊
+const FONT = '"Noto Sans CJK TC","PingFang TC","Microsoft JhengHei","Heiti TC","Source Han Sans TC",sans-serif'
 
 const fmtDateTime = (d: Date) =>
   `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -125,11 +126,12 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
                 <Dim label="產品深 D" v={v('depth_cm')} big={false} />
               </div>
               {extras.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 28, marginTop: 10, fontSize: 21, color: C.text }}>
+                <div style={{ marginTop: 10, fontSize: 21, color: C.text }}>
                   {extras.map((f) => (
-                    <div key={f} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.line}`, padding: '6px 0' }}>
-                      <span style={{ color: C.sub }}>{SPEC_LABELS[f]}</span>
-                      <span style={{ fontWeight: 700 }}>{v(f)} cm</span>
+                    // 一列一項：標籤可換行並撐高該列，數值不換行 → 不會重疊
+                    <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, borderBottom: `1px solid ${C.line}`, padding: '7px 0', lineHeight: 1.4 }}>
+                      <span style={{ flex: 1, minWidth: 0, color: C.sub, wordBreak: 'break-word' }}>{SPEC_LABELS[f]}</span>
+                      <span style={{ flexShrink: 0, whiteSpace: 'nowrap', fontWeight: 700 }}>{v(f)} cm</span>
                     </div>
                   ))}
                 </div>

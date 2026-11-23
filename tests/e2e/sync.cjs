@@ -129,10 +129,9 @@ async function editModel(page, name, model) {
   }, { name: name1 });
   // 直接用 B 的權杖呼叫 API 嘗試讀取/修改 A 的資料
   const aRow = await a1.page.evaluate(async (name) => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const q = r.result.transaction('surveys').objectStore('surveys').getAll(); q.onsuccess = () => res(q.result.find((s) => s.customer_name === name)); }; }), name1);
-  const api = await b.page.evaluate(async ({ id, uid }) => {
+  const api = await b.page.evaluate(async ({ id, uid, apikey }) => {
     const key = Object.keys(localStorage).find((k) => k.includes('auth-token'));
     const token = JSON.parse(localStorage.getItem(key)).access_token;
-    const apikey = process.env.HSP_ANON_KEY;
     const h = { apikey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Prefer: 'return=representation' };
     const base = 'https://kmcnowfjzrppntgktyjq.supabase.co/rest/v1';
     const read = await (await fetch(`${base}/surveys?id=eq.${id}`, { headers: h })).json();
@@ -142,7 +141,7 @@ async function editModel(page, name, model) {
     const fake = await fetch(`${base}/surveys`, { method: 'POST', headers: h, body: JSON.stringify({ id: crypto.randomUUID(), user_id: uid, customer_name: 'B 冒充 A' }) });
     const del = await fetch(`${base}/surveys?id=eq.${id}`, { method: 'DELETE', headers: h });
     return { read: read.length, readAll: Array.isArray(readAll) ? readAll.filter((r) => r.user_id === uid || r.id === id).length : readAll, bOwn: readAll.length, upd: upd.length, ins: ins.status, fake: fake.status, del: del.status };
-  }, { id: aRow.id, uid: aRow.user_id });
+  }, { id: aRow.id, uid: aRow.user_id, apikey: process.env.HSP_ANON_KEY });
   console.log('  B 直接呼叫 API：', JSON.stringify(api));
   check(api.read === 0, 'B 用 API 讀 A 的場勘 → 0 筆');
   check(api.readAll === 0, 'B 用 API 讀全部場勘 → 只有自己的，A 的 0 筆');
