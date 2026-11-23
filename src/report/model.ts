@@ -1,5 +1,6 @@
 import type { Survey, SurveyArea, SurveyPhoto, SurveyProduct } from '../db/types'
 import { surveySummary, type SurveySummary } from '../lib/completeness'
+import type { CheckResult } from '../rules/types'
 
 /** A4 直式（CSS px）：1240 × 1754，輸出時 pixelRatio 2 → 2480 × 3508 */
 export const PAGE_W = 1240
@@ -30,6 +31,8 @@ export type Block =
   | { kind: 'summary-head'; key: string }
   | { kind: 'summary-row'; key: string; areaIndex: number }
   | { kind: 'product'; key: string; productIndex: number }
+  | { kind: 'check-head'; key: string }
+  | { kind: 'finding'; key: string; findingIndex: number }
   | { kind: 'area-head'; key: string; areaIndex: number; startsArea: true }
   | { kind: 'area-cont'; key: string; areaIndex: number }
   | { kind: 'area-notes'; key: string; areaIndex: number; text: string; first: boolean }
@@ -44,10 +47,12 @@ export interface ReportData {
   summary: SurveySummary
   /** 場勘選擇的產品（規格以快照為準） */
   products: SurveyProduct[]
+  /** 洗衣機現場檢查結果（未啟用為 null） */
+  check: CheckResult | null
   generatedAt: Date
 }
 
-export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = []): ReportData {
+export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = [], check: CheckResult | null = null): ReportData {
   const live = photos.filter((p) => !p.deleted_at)
   const photosByArea = new Map<string, ReportPhoto[]>()
   for (const a of areas) {
@@ -57,7 +62,7 @@ export function buildReportData(survey: Survey, areas: SurveyArea[], photos: Sur
       .map((p, i) => ({ id: p.id, url: urls.get(p.id) ?? null, width: p.width ?? 4, height: p.height ?? 3, caption: p.caption, index: i + 1 }))
     photosByArea.set(a.id, list)
   }
-  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products }
+  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products, check }
 }
 
 /** 照片列高度：依照片比例縮放到欄寬，取兩張中較高者，上限 PHOTO_MAX_H（不裁切，object-fit: contain） */
@@ -88,6 +93,10 @@ export function buildBlocks(d: ReportData): Block[] {
   const blocks: Block[] = [{ kind: 'cover', key: 'cover' }, { kind: 'summary-head', key: 'sum-h' }]
   d.areas.forEach((_, i) => blocks.push({ kind: 'summary-row', key: `sum-${i}`, areaIndex: i }))
   d.products.forEach((_, i) => blocks.push({ kind: 'product', key: `prod-${i}`, productIndex: i }))
+  if (d.check) {
+    blocks.push({ kind: 'check-head', key: 'chk-h' })
+    d.check.findings.forEach((_, i) => blocks.push({ kind: 'finding', key: `chk-${i}`, findingIndex: i }))
+  }
   d.areas.forEach((a, i) => {
     blocks.push({ kind: 'area-head', key: `ah-${i}`, areaIndex: i, startsArea: true })
     if (a.notes) splitNotes(a.notes).forEach((t, k) => blocks.push({ kind: 'area-notes', key: `an-${i}-${k}`, areaIndex: i, text: t, first: k === 0 }))

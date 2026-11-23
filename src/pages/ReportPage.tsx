@@ -8,6 +8,9 @@ import { Button, ErrorBox, Icon, IconButton, TopBar, PageTitle } from '../compon
 import { useToast } from '../components/Toast'
 import { buildBlocks, buildReportData, CONTENT_H, paginate, PAGE_H, PAGE_W, type Block, type ReportData } from '../report/model'
 import { BlockView, MeasureBox, ReportPage as PageView } from '../report/ReportView'
+import { loadWasherCheck } from '../components/WasherCheck'
+import { templateRowId } from '../db/repo'
+import { WASHER_TEMPLATE_ID } from '../templates/washer'
 import { canShareFiles, downloadAll, downloadBlob, safeName, shareFiles, zipFiles } from '../report/share'
 
 /** 報告用照片：長邊 1800px、JPEG 0.92（輸出 2 倍解析度時欄寬約 1070px，清晰不糊） */
@@ -68,7 +71,8 @@ export function ReportPage() {
         }
         if (!alive) return
         const products = (await db.survey_products.where('survey_id').equals(id!).toArray()).filter((p) => !p.deleted_at).sort((a, b) => a.sort_order - b.sort_order)
-        const d = buildReportData(survey, areas, photos, urls, products)
+        const check = (await loadWasherCheck(id!, await templateRowId(id!, WASHER_TEMPLATE_ID))).result
+        const d = buildReportData(survey, areas, photos, urls, products, check)
         setMissingPhotos(missing)
         setData(d)
         setBlocks(buildBlocks(d))

@@ -1,5 +1,6 @@
 import { useRef, useState, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useAuth, useUserId } from '../auth/AuthProvider'
 import { applyRestore, exportJson, exportZip, readBackup, type RestorePlan } from '../backup/backup'
 import { db } from '../db/db'
@@ -25,6 +26,11 @@ export function SettingsPage() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [plan, setPlan] = useState<RestorePlan | null>(null)
+  // 照片空間用量（以本機紀錄的檔案大小估算；Supabase 免費方案 Storage 上限 1 GB）
+  const usage = useLiveQuery(async () => {
+    const ps = (await db.survey_photos.where('user_id').equals(userId).toArray()).filter((p) => !p.deleted_at)
+    return { count: ps.length, bytes: ps.reduce((s, p) => s + (p.size_bytes ?? 0), 0) }
+  }, [userId])
 
   async function run(label: string, fn: () => Promise<void>) {
     setError('')
@@ -55,7 +61,7 @@ export function SettingsPage() {
     run('還原中…', async () => {
       const r = await applyRestore(plan!, userId)
       setPlan(null)
-      setInfo(`還原完成：新增 ${r.surveys} 筆場勘、${r.areas} 個區域、${r.products} 個安裝產品、${r.photos} 張照片，將自動同步到雲端。`)
+      setInfo(`還原完成：新增 ${r.surveys} 筆場勘、${r.areas} 個區域、${r.products} 個安裝產品、${r.templates} 份現場檢查、${r.photos} 張照片，將自動同步到雲端。`)
       toast('還原完成')
       void syncNow()
     })
@@ -66,7 +72,7 @@ export function SettingsPage() {
     await supabase!.auth.signOut({ scope: 'local' })
   }
 
-  const nothingNew = plan && !plan.newSurveys.length && !plan.newAreas.length && !plan.newPhotos.length && !plan.newProducts.length
+  const nothingNew = plan && !plan.newSurveys.length && !plan.newAreas.length && !plan.newPhotos.length && !plan.newProducts.length && !plan.newTemplates.length
 
   return (
     <div className="min-h-dvh pb-10">
@@ -101,6 +107,27 @@ export function SettingsPage() {
           </div>
         </Card>
 
+        {usage && (
+          <Card>
+            <h2 className="text-xs font-medium tracking-[0.18em] text-sub">照片空間</h2>
+            {(() => {
+              const LIMIT = 1024 ** 3
+              const pct = Math.min(100, (usage.bytes / LIMIT) * 100)
+              return (
+                <div data-testid="storage-usage">
+                  <p className="mt-1 text-lg font-light tabular-nums text-ink">
+                    {(usage.bytes / 1024 ** 2).toFixed(1)} MB <span className="text-sm text-sub">/ 1 GB・{usage.count} 張照片</span>
+                  </p>
+                  <div className="mt-2 h-1.5 w-full bg-sand-2" aria-hidden><div className={`h-full ${pct > 80 ? 'bg-red-700' : 'bg-ink'}`} style={{ width: `${Math.max(pct, 0.5)}%` }} /></div>
+                  <p className="mt-2 text-xs text-sub">
+                    免費方案的雲端照片空間上限為 1 GB{usage.count > 0 && usage.bytes > 0 ? `（依目前平均大小約可存 ${Math.floor(LIMIT / (usage.bytes / usage.count)).toLocaleString()} 張）` : ''}。{pct > 80 ? '空間即將用完，請匯出完整備份後刪除舊案件。' : ''}
+                  </p>
+                </div>
+              )
+            })()}
+          </Card>
+        )}
+
         <Card>
           <h2 className="text-xs font-medium tracking-[0.18em] text-sub">資料備份</h2>
           <p className="mt-1 text-sm text-sub">雲端同步之外的完整備份，建議定期保存一份到電腦或雲端硬碟。</p>
@@ -122,7 +149,7 @@ export function SettingsPage() {
             <h3 className="text-2xl font-light text-ink">確認從備份還原</h3>
             <p className="mt-1 text-sm text-sub">備份時間：{new Date(plan.json.exportedAt).toLocaleString('zh-TW')}{plan.json.account?.email ? `・${plan.json.account.email}` : ''}</p>
             <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-              {([['場勘', plan.newSurveys.length, plan.skipped.surveys], ['區域', plan.newAreas.length, plan.skipped.areas], ['照片', plan.newPhotos.length, plan.skipped.photos], ['產品', plan.newProducts.length, plan.skipped.products]] as const).map(([l, n, sk]) => (
+              {([['場勘', plan.newSurveys.length, plan.skipped.surveys], ['區域', plan.newAreas.length, plan.skipped.areas], ['照片', plan.newPhotos.length, plan.skipped.photos], ['產品', plan.newProducts.length, plan.skipped.products], ['現場檢查', plan.newTemplates.length, plan.skipped.templates]] as const).map(([l, n, sk]) => (
                 <div key={l} className="border-t border-ink pt-3">
                   <div className="text-xs text-sub">{l}</div>
                   <div className="text-3xl font-light text-ink">+{n}</div>

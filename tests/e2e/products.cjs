@@ -140,7 +140,7 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   const jf = S + '/p3-backup.json'; await (await dl).saveAs(jf)
   const bj = JSON.parse(fs.readFileSync(jf, 'utf8'))
   const mine = bj.products.filter((x) => x.model_code === 'WD-S2220B').map((x) => x.spec_snapshot.width_cm)
-  check(bj.version === 2 && mine.includes(70) && mine.includes(71), '備份 v2 包含產品快照（70 與 71 各自保存）')
+  check(bj.version >= 2 && mine.includes(70) && mine.includes(71), '備份包含產品快照（70 與 71 各自保存）')
   await p.getByTestId('restore-input').setInputFiles(jf); await p.getByRole('dialog', { name: '確認還原' }).waitFor()
   check(await seen(p, '備份中的資料都已存在'), '重複還原：產品快照不重複建立')
   console.log('\n結果：' + ok + ' 通過，' + bad + ' 失敗'); await browser.close(); process.exit(bad ? 1 : 0)

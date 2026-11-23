@@ -22,5 +22,6 @@ node tests/e2e/sync.cjs /tmp/hsp-e2e     # 參數 = 存放截圖、測試照片�
 | backup.cjs | 備份、還原、不重複匯入、跨帳號還原 |
 | catalog.cjs | 產品知識庫搜尋、詳細、一對多、離線、同步失敗（使用 catalog-fixtures.mts 產生的測試資料） |
 | upgrade.cjs | 從上一版 App 升級：本機資料與未同步資料保留 |
+| washer.cjs | 洗衣機現場檢查：模板欄位、防呆規則、拍攝清單、同步、報告、備份 v3 |
 
 測試照片：`<工作資料夾>/photos/p1.jpg…`（任意 JPEG 即可）。測試帳號與密碼不得提交到程式庫。

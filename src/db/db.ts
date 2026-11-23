@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import type {
   ConflictItem,
   SurveyProduct,
+  SurveyTemplate,
   MetaItem,
   OutboxItem,
   PhotoBlob,
@@ -16,6 +17,7 @@ export class SurveyDB extends Dexie {
   survey_areas!: EntityTable<SurveyArea, 'id'>
   survey_photos!: EntityTable<SurveyPhoto, 'id'>
   survey_products!: EntityTable<SurveyProduct, 'id'>
+  survey_templates!: EntityTable<SurveyTemplate, 'id'>
   photoBlobs!: EntityTable<PhotoBlob, 'id'>
   outbox!: EntityTable<OutboxItem, 'key'>
   conflicts!: EntityTable<ConflictItem, 'key'>
@@ -43,6 +45,10 @@ export class SurveyDB extends Dexie {
     // v3：新增場勘選擇的產品（規格快照）；既有資料表不變
     this.version(3).stores({
       survey_products: 'id, survey_id, user_id, _dirty',
+    })
+    // v4：新增場勘模板欄位值；照片多一個可選欄位 shot_key（不需要索引，既有資料不變）
+    this.version(4).stores({
+      survey_templates: 'id, survey_id, user_id, _dirty',
     })
   }
 }

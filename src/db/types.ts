@@ -51,6 +51,8 @@ export interface SurveyPhoto extends BaseRow {
   height: number | null
   size_bytes: number | null
   mime_type: string
+  /** 拍攝清單項目（模板定義的 key）；null = 一般照片 */
+  shot_key?: string | null
   /** 'pending' = 檔案只在本機；'uploaded' = Storage 已確認 */
   _blobState: 'pending' | 'uploaded' | 'remote-only'
 }
@@ -95,7 +97,16 @@ export interface ProductSpecSnapshot {
   [spec: string]: unknown
 }
 
-export type TableName = 'surveys' | 'survey_areas' | 'survey_products' | 'survey_photos'
+/** 場勘模板欄位值（每筆場勘、每種模板一筆；id 由 survey_id + template_id 決定） */
+export interface SurveyTemplate extends BaseRow {
+  survey_id: string
+  template_id: string
+  template_version: number
+  install_area_id: string | null
+  values: Record<string, string | number | null>
+}
+
+export type TableName = 'surveys' | 'survey_areas' | 'survey_products' | 'survey_templates' | 'survey_photos'
 
 export interface OutboxItem {
   key: string // `${table}:${rowId}`

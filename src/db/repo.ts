@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 import { db } from './db'
 import type { CatalogProduct } from '../catalog/types'
-import type { ProductSpecSnapshot, SurveyProduct } from './types'
+import type { ProductSpecSnapshot, SurveyProduct, SurveyTemplate } from './types'
 import { SPEC_FIELDS } from '../../supabase/functions/_shared/catalog/installText.ts'
 import type { AreaKind, OutboxItem, Survey, SurveyArea, TableName } from './types'
 
@@ -102,9 +102,14 @@ export async function updateSurvey(id: string, patch: Partial<SurveyInput>): Pro
 /** 軟刪除場勘（含其區域與照片），同步到雲端後其他裝置也會隱藏 */
 export async function deleteSurvey(id: string): Promise<void> {
   const t = nowIso()
-  await db.transaction('rw', db.surveys, db.survey_areas, db.survey_photos, db.survey_products, db.outbox, async () => {
+  await db.transaction('rw', [db.surveys, db.survey_areas, db.survey_photos, db.survey_products, db.survey_templates, db.outbox], async () => {
     const s = await db.surveys.get(id)
     if (!s) return
+    for (const st of await db.survey_templates.where('survey_id').equals(id).toArray()) {
+      if (st.deleted_at) continue
+      await db.survey_templates.put({ ...st, deleted_at: t, updated_at: t, _dirty: 1 })
+      await enqueue('survey_templates', st.id, st.user_id)
+    }
     for (const sp of await db.survey_products.where('survey_id').equals(id).toArray()) {
       if (sp.deleted_at) continue
       await db.survey_products.put({ ...sp, deleted_at: t, updated_at: t, _dirty: 1 })
@@ -215,7 +220,7 @@ export async function moveArea(surveyId: string, id: string, dir: -1 | 1): Promi
 // ---------------------------------------------------------------------------
 // 照片
 // ---------------------------------------------------------------------------
-export async function addPhoto(areaId: string, img: { blob: Blob; width: number; height: number }): Promise<string> {
+export async function addPhoto(areaId: string, img: { blob: Blob; width: number; height: number }, shotKey: string | null = null): Promise<string> {
   const id = uuid()
   await db.transaction('rw', db.survey_areas, db.survey_photos, db.photoBlobs, db.outbox, async () => {
     const a = await db.survey_areas.get(areaId)
@@ -236,6 +241,7 @@ export async function addPhoto(areaId: string, img: { blob: Blob; width: number;
       height: img.height,
       size_bytes: img.blob.size,
       mime_type: 'image/jpeg',
+      shot_key: shotKey,
       revision: 0,
       created_at: t,
       updated_at: t,
@@ -247,6 +253,16 @@ export async function addPhoto(areaId: string, img: { blob: Blob; width: number;
     await enqueue('survey_photos', id, a.user_id)
   })
   return id
+}
+
+/** 設定照片對應的拍攝清單項目（null = 取消） */
+export async function setPhotoShot(id: string, shotKey: string | null): Promise<void> {
+  await db.transaction('rw', db.survey_photos, db.outbox, async () => {
+    const p = await db.survey_photos.get(id)
+    if (!p || (p.shot_key ?? null) === shotKey) return
+    await db.survey_photos.put({ ...p, shot_key: shotKey, updated_at: nowIso(), _dirty: 1 })
+    await enqueue('survey_photos', id, p.user_id)
+  })
 }
 
 export async function updatePhotoCaption(id: string, caption: string | null): Promise<void> {
@@ -383,5 +399,62 @@ export async function removeSurveyProduct(id: string): Promise<void> {
         await enqueue('surveys', s.id, s.user_id)
       }
     }
+  })
+}
+
+// ---------------------------------------------------------------------------
+// 場勘模板欄位值
+// ---------------------------------------------------------------------------
+/** 由 survey_id + template_id 決定性產生 UUID：兩台裝置離線各自建立也會是同一筆，不會重複 */
+export async function templateRowId(surveyId: string, templateId: string): Promise<string> {
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`survey-template:${surveyId}:${templateId}`)))
+  h[6] = (h[6] & 0x0f) | 0x80 // version 8（自訂）
+  h[8] = (h[8] & 0x3f) | 0x80
+  const x = [...h.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('')
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`
+}
+
+/** 寫入模板欄位（只合併有給的欄位）；不存在就建立 */
+export async function saveTemplate(
+  surveyId: string,
+  templateId: string,
+  version: number,
+  patch: { values?: Record<string, string | number | null>; install_area_id?: string | null },
+): Promise<void> {
+  const id = await templateRowId(surveyId, templateId) // 在 transaction 外計算（crypto 非 Dexie promise）
+  await db.transaction('rw', db.surveys, db.survey_templates, db.outbox, async () => {
+    const s = await db.surveys.get(surveyId)
+    if (!s) throw new Error('找不到這筆場勘')
+    const t = nowIso()
+    const cur = await db.survey_templates.get(id)
+    const values = { ...(cur && !cur.deleted_at ? cur.values : {}), ...(patch.values ?? {}) }
+    for (const k of Object.keys(values)) if (values[k] === null || values[k] === '') delete values[k]
+    const row: SurveyTemplate = cur
+      ? {
+          ...cur,
+          values,
+          install_area_id: patch.install_area_id !== undefined ? patch.install_area_id : cur.install_area_id,
+          template_version: Math.max(cur.template_version, version),
+          deleted_at: null,
+          updated_at: t,
+          _dirty: 1,
+        }
+      : {
+          id,
+          survey_id: surveyId,
+          user_id: s.user_id,
+          template_id: templateId,
+          template_version: version,
+          install_area_id: patch.install_area_id ?? null,
+          values,
+          revision: 0,
+          created_at: t,
+          updated_at: t,
+          deleted_at: null,
+          _dirty: 1,
+          _baseRevision: 0,
+        }
+    await db.survey_templates.put(row)
+    await enqueue('survey_templates', id, s.user_id)
   })
 }

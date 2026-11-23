@@ -10,12 +10,14 @@
  */
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { db } from '../db/db'
-import type { Survey, SurveyArea, SurveyPhoto, SurveyProduct } from '../db/types'
+import type { Survey, SurveyArea, SurveyPhoto, SurveyProduct, SurveyTemplate } from '../db/types'
 import { ensurePhotoBlob } from '../sync/engine'
+import { templateRowId } from '../db/repo'
 
 export const BACKUP_FORMAT = 'home-survey-pro-backup'
-/** v2：新增 products（場勘選擇的產品與規格快照）；仍可還原 v1 */
-export const BACKUP_VERSION = 2
+/** v2：新增 products（場勘選擇的產品與規格快照）
+ *  v3：新增 templates（現場檢查欄位值）與照片 shot_key；仍可還原 v1、v2 */
+export const BACKUP_VERSION = 3
 
 type Strip<T> = Omit<T, '_dirty' | '_baseRevision' | '_syncError' | '_blobState'>
 export interface BackupJson {
@@ -24,13 +26,15 @@ export interface BackupJson {
   exportedAt: string
   app: string
   account: { user_id: string; email: string | null }
-  counts: { surveys: number; areas: number; photos: number; photoFiles: number; products?: number }
+  counts: { surveys: number; areas: number; photos: number; photoFiles: number; products?: number; templates?: number }
   missingPhotoFiles: string[]
   surveys: Strip<Survey>[]
   areas: Strip<SurveyArea>[]
   photos: Strip<SurveyPhoto>[]
   /** v2 起才有 */
   products?: Strip<SurveyProduct>[]
+  /** v3 起才有 */
+  templates?: Strip<SurveyTemplate>[]
 }
 
 function strip<T extends object>(row: T): Strip<T & { _dirty: 0; _baseRevision: 0 }> {
@@ -46,23 +50,25 @@ async function collect(userId: string) {
   const areaIds = new Set(areas.map((a) => a.id))
   const photos = (await db.survey_photos.where('user_id').equals(userId).toArray()).filter((p) => !p.deleted_at && areaIds.has(p.area_id))
   const products = (await db.survey_products.where('user_id').equals(userId).toArray()).filter((p) => !p.deleted_at && ids.has(p.survey_id))
-  return { surveys, areas, photos, products }
+  const templates = (await db.survey_templates.where('user_id').equals(userId).toArray()).filter((t) => !t.deleted_at && ids.has(t.survey_id))
+  return { surveys, areas, photos, products, templates }
 }
 
 export async function buildBackupJson(userId: string, email: string | null, photoFiles: number, missing: string[]): Promise<BackupJson> {
-  const { surveys, areas, photos, products } = await collect(userId)
+  const { surveys, areas, photos, products, templates } = await collect(userId)
   return {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     app: '家電場勘助手 Pro',
     account: { user_id: userId, email },
-    counts: { surveys: surveys.length, areas: areas.length, photos: photos.length, photoFiles, products: products.length },
+    counts: { surveys: surveys.length, areas: areas.length, photos: photos.length, photoFiles, products: products.length, templates: templates.length },
     missingPhotoFiles: missing,
     surveys: surveys.map(strip),
     areas: areas.map(strip),
     photos: photos.map(strip),
     products: products.map(strip),
+    templates: templates.map(strip),
   }
 }
 
@@ -100,7 +106,8 @@ export interface RestorePlan {
   newAreas: Strip<SurveyArea>[]
   newPhotos: Strip<SurveyPhoto>[]
   newProducts: Strip<SurveyProduct>[]
-  skipped: { surveys: number; areas: number; photos: number; products: number }
+  newTemplates: Strip<SurveyTemplate>[]
+  skipped: { surveys: number; areas: number; photos: number; products: number; templates: number }
   photosWithoutFile: number
   otherAccount: boolean
   /** 備份內 ID → 寫入本機的 ID（同帳號相同；不同帳號換成新 UUID，並記住對應避免重複匯入） */
@@ -140,14 +147,18 @@ export async function readBackup(file: File, userId: string): Promise<RestorePla
     const prev = await db.meta.bulkGet(keys)
     all.forEach((r, i) => idMap.set(r.id, (prev[i]?.value as string | undefined) ?? crypto.randomUUID()))
   } else all.forEach((r) => idMap.set(r.id, r.id))
+  // 模板資料列的 ID 由場勘 ID 決定（不同帳號場勘換了新 ID，模板 ID 也要跟著重算）
+  const jsonTemplates = json.templates ?? []
+  for (const t of jsonTemplates) idMap.set(t.id, await templateRowId(idMap.get(t.survey_id) ?? t.survey_id, t.template_id))
 
   // 以 UUID 比對本機既有資料（含已刪除的，避免把刪除的資料救回來）
-  const has = async (t: 'surveys' | 'survey_areas' | 'survey_photos' | 'survey_products', ids: string[]) =>
+  const has = async (t: 'surveys' | 'survey_areas' | 'survey_photos' | 'survey_products' | 'survey_templates', ids: string[]) =>
     new Set((await (db.table(t) as import('dexie').Table<{ id: string }, string>).bulkGet(ids.map((i) => idMap.get(i)!))).filter(Boolean).map((r) => r!.id))
   const sHas = await has('surveys', json.surveys.map((s) => s.id))
   const aHas = await has('survey_areas', json.areas.map((a) => a.id))
   const pHas = await has('survey_photos', json.photos.map((p) => p.id))
   const prHas = await has('survey_products', jsonProducts.map((p) => p.id))
+  const tHas = await has('survey_templates', jsonTemplates.map((t) => t.id))
   const exists = (set: Set<string>, id: string) => set.has(idMap.get(id)!)
   const newPhotosAll = json.photos.filter((p) => !exists(pHas, p.id))
   const newPhotos = newPhotosAll.filter((p) => photoFiles.has(p.id))
@@ -158,7 +169,8 @@ export async function readBackup(file: File, userId: string): Promise<RestorePla
     newAreas: json.areas.filter((a) => !exists(aHas, a.id)),
     newPhotos,
     newProducts: jsonProducts.filter((p) => !exists(prHas, p.id)),
-    skipped: { surveys: sHas.size, areas: aHas.size, photos: pHas.size, products: prHas.size },
+    newTemplates: jsonTemplates.filter((t) => !exists(tHas, t.id) && json.surveys.some((s) => s.id === t.survey_id)),
+    skipped: { surveys: sHas.size, areas: aHas.size, photos: pHas.size, products: prHas.size, templates: tHas.size },
     photosWithoutFile: newPhotosAll.length - newPhotos.length,
     otherAccount,
     idMap,
@@ -166,12 +178,12 @@ export async function readBackup(file: File, userId: string): Promise<RestorePla
 }
 
 /** 執行還原：全部在一個 transaction，要嘛全部成功、要嘛完全不變 */
-export async function applyRestore(plan: RestorePlan, userId: string): Promise<{ surveys: number; areas: number; photos: number; products: number }> {
+export async function applyRestore(plan: RestorePlan, userId: string): Promise<{ surveys: number; areas: number; photos: number; products: number; templates: number }> {
   const now = new Date().toISOString()
   const local = { _dirty: 1 as const, _baseRevision: 0, _syncError: null, revision: 0 }
   const m = (id: string) => plan.idMap.get(id) ?? id
-  await db.transaction('rw', [db.surveys, db.survey_areas, db.survey_photos, db.survey_products, db.photoBlobs, db.outbox, db.meta], async () => {
-    const enqueue = (table: 'surveys' | 'survey_areas' | 'survey_photos' | 'survey_products', id: string) =>
+  await db.transaction('rw', [db.surveys, db.survey_areas, db.survey_photos, db.survey_products, db.survey_templates, db.photoBlobs, db.outbox, db.meta], async () => {
+    const enqueue = (table: 'surveys' | 'survey_areas' | 'survey_photos' | 'survey_products' | 'survey_templates', id: string) =>
       db.outbox.put({ key: `${table}:${id}`, table, rowId: id, userId, createdAt: Date.now(), attempts: 0, lastError: null })
     const remember = (oldId: string) => (plan.otherAccount ? db.meta.put({ key: `restored:${userId}:${oldId}`, value: m(oldId) }) : undefined)
     for (const s of plan.newSurveys) {
@@ -189,6 +201,11 @@ export async function applyRestore(plan: RestorePlan, userId: string): Promise<{
       await db.survey_products.add({ ...(sp as SurveyProduct), ...local, id: m(sp.id), survey_id: m(sp.survey_id), user_id: userId, updated_at: now })
       await enqueue('survey_products', m(sp.id))
       await remember(sp.id)
+    }
+    for (const t of plan.newTemplates) {
+      const areaId = t.install_area_id ? plan.idMap.get(t.install_area_id) ?? null : null
+      await db.survey_templates.add({ ...(t as SurveyTemplate), ...local, id: m(t.id), survey_id: m(t.survey_id), install_area_id: areaId, user_id: userId, updated_at: now })
+      await enqueue('survey_templates', m(t.id))
     }
     for (const p of plan.newPhotos) {
       const data = plan.photoFiles.get(p.id)!
@@ -209,5 +226,5 @@ export async function applyRestore(plan: RestorePlan, userId: string): Promise<{
       await remember(p.id)
     }
   })
-  return { surveys: plan.newSurveys.length, areas: plan.newAreas.length, photos: plan.newPhotos.length, products: plan.newProducts.length }
+  return { surveys: plan.newSurveys.length, areas: plan.newAreas.length, photos: plan.newPhotos.length, products: plan.newProducts.length, templates: plan.newTemplates.length }
 }

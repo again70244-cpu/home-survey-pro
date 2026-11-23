@@ -1,0 +1,292 @@
+import { useEffect, useRef, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../db/db'
+import { addPhoto, saveTemplate, templateRowId, updatePhotoCaption } from '../db/repo'
+import type { SurveyArea } from '../db/types'
+import { compressImage } from '../lib/image'
+import { WASHER_SECTIONS, WASHER_SHOTS, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERSION, type ShotItem, type TemplateField } from '../templates/washer'
+import { checkWasher, pickInstallArea, washerProducts, type TemplateValues } from '../rules/washer'
+import { RISK_LABEL, type CheckResult, type Finding, type RiskLevel } from '../rules/types'
+import { Button, Icon } from './ui'
+import { useToast } from './Toast'
+
+export const LEVEL_STYLE: Record<RiskLevel, string> = {
+  high: 'border-red-700 bg-red-50 text-red-800',
+  confirm: 'border-oak bg-sand text-ink',
+  caution: 'border-[#b8860b] bg-[#fdf8ec] text-ink',
+  info: 'border-line bg-white text-[#555]',
+}
+
+/** 只有「有」時才需要填距離 */
+const SHOW_IF: Record<string, (v: TemplateValues) => boolean> = {
+  faucet_distance_cm: (v) => v.faucet === 'yes',
+  drain_distance_cm: (v) => v.drain_type === 'floor' || v.drain_type === 'wall',
+  outlet_distance_cm: (v) => v.outlet === 'yes',
+  outlet_grounded: (v) => v.outlet === 'yes',
+  dedicated_circuit: (v) => v.outlet === 'yes',
+}
+
+/** 載入洗衣機檢查需要的資料，並計算結果（報告頁也共用） */
+export async function loadWasherCheck(surveyId: string, id: string) {
+  const [tpl, areasAll, products, photos] = await Promise.all([
+    db.survey_templates.get(id),
+    db.survey_areas.where('survey_id').equals(surveyId).toArray(),
+    db.survey_products.where('survey_id').equals(surveyId).toArray(),
+    db.survey_photos.where('survey_id').equals(surveyId).toArray(),
+  ])
+  const areas = areasAll.filter((a) => !a.deleted_at).sort((a, b) => a.sort_order - b.sort_order)
+  const live = products.filter((p) => !p.deleted_at)
+  const activeTpl = tpl && !tpl.deleted_at ? tpl : null
+  const active = !!activeTpl || washerProducts(live).length > 0
+  const areaIds = new Set(areas.map((a) => a.id))
+  const shotsTaken = new Set(photos.filter((p) => !p.deleted_at && p.shot_key && areaIds.has(p.area_id)).map((p) => p.shot_key!))
+  const values = activeTpl?.values ?? {}
+  const installAreaId = activeTpl?.install_area_id ?? null
+  const result = active ? checkWasher({ values, installAreaId, areas, products: live, shotsTaken }) : null
+  return { active, values, installAreaId, areas, shotsTaken, result, installArea: pickInstallArea(areas, installAreaId), hasWasher: washerProducts(live).length > 0 }
+}
+
+function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown; onChange: (v: string | null) => void }) {
+  return (
+    <fieldset>
+      <legend className="mb-1.5 text-[13px] text-ink">{f.label}{f.required && <span className="ml-1 text-oak">*</span>}</legend>
+      {f.hint && <p className="-mt-1 mb-1.5 text-xs text-sub">{f.hint}</p>}
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={f.label}>
+        {f.options!.map((o) => {
+          const on = value === o.value
+          return (
+            <button
+              key={o.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              data-field={f.key}
+              data-value={o.value}
+              onClick={() => onChange(on ? null : o.value)}
+              className={`h-10 min-w-16 border px-3 text-sm ${on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink active:bg-sand'}`}
+            >
+              {o.label}
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+function InputField({ f, value, onSave }: { f: TemplateField; value: unknown; onSave: (v: string | number | null) => void }) {
+  const [text, setText] = useState(value == null ? '' : String(value))
+  const editing = useRef(false)
+  useEffect(() => {
+    if (!editing.current) setText(value == null ? '' : String(value))
+  }, [value])
+  const commit = () => {
+    editing.current = false
+    const t = text.trim()
+    if (f.type === 'cm') {
+      if (t === '') return value != null && onSave(null)
+      const n = Number(t)
+      if (!Number.isFinite(n) || n < 0) return setText(value == null ? '' : String(value))
+      if (n !== value) onSave(Math.round(n * 10) / 10)
+    } else if ((t || null) !== (value ?? null)) onSave(t || null)
+  }
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[13px] text-ink">{f.label}{f.required && <span className="ml-1 text-oak">*</span>}{f.type === 'cm' && <span className="ml-1 text-xs text-sub">（公分）</span>}</span>
+      {f.hint && <span className="mb-1 block text-xs text-sub">{f.hint}</span>}
+      <input
+        value={text}
+        inputMode={f.type === 'cm' ? 'decimal' : undefined}
+        data-field={f.key}
+        aria-label={f.label}
+        placeholder={f.type === 'cm' ? '未測量' : ''}
+        onFocus={() => (editing.current = true)}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        className="block w-full border-0 border-b border-[#d4d4d4] bg-transparent px-0 py-2 text-[17px] tabular-nums focus:border-ink focus:outline-none focus:ring-0"
+      />
+    </label>
+  )
+}
+
+export function FindingItem({ f }: { f: Finding }) {
+  return (
+    <li className={`border-l-2 px-3 py-2.5 ${LEVEL_STYLE[f.level]}`} data-level={f.level} data-finding={f.id}>
+      <div className="text-[11px] tracking-[0.12em]">{RISK_LABEL[f.level]}</div>
+      <div className="mt-0.5 text-[15px] font-medium text-ink">{f.title}</div>
+      <div className="mt-1 text-[13px] text-[#444]">{f.why}</div>
+      <div className="mt-1 text-[12px] text-sub">依據：{f.basis}</div>
+      <div className="mt-1 text-[13px] text-ink">建議：{f.suggestion}</div>
+    </li>
+  )
+}
+
+export function ResultSummary({ r }: { r: CheckResult }) {
+  const levels: RiskLevel[] = ['high', 'confirm', 'caution', 'info']
+  return (
+    <div className="grid grid-cols-4 border-y border-ink text-center" aria-label="檢查結果統計">
+      {levels.map((l, i) => (
+        <div key={l} className={`py-2 ${i < 3 ? 'border-r border-line' : ''}`}>
+          <div className={`text-xl font-light tabular-nums ${r.counts[l] && l === 'high' ? 'text-red-700' : ''}`} data-count={l}>{r.counts[l]}</div>
+          <div className="text-[10px] tracking-[0.08em] text-sub">{RISK_LABEL[l]}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** 拍攝項目應拍在哪個區域：電梯樓梯 → 電梯或樓梯區域；搬運路線 → 第一個非安裝位置的區域；其餘 → 安裝位置 */
+function areaForShot(shot: ShotItem, areas: SurveyArea[], install: SurveyArea | null): SurveyArea | null {
+  if (shot.key === 'elevator_stairs') return areas.find((a) => a.kind === 'elevator') ?? areas.find((a) => a.kind === 'stairs') ?? install
+  if (shot.key === 'route') return areas.find((a) => a.id !== install?.id && a.kind === 'other') ?? install
+  return install
+}
+
+/** 場勘頁「洗衣機現場檢查」區塊 */
+export function WasherCheck({ surveyId }: { surveyId: string }) {
+  const toast = useToast()
+  // 模板資料列 ID 需用 crypto 計算，先算好再交給 liveQuery（liveQuery 內只放 Dexie 查詢）
+  const [tplId, setTplId] = useState<string | null>(null)
+  useEffect(() => void templateRowId(surveyId, WASHER_TEMPLATE_ID).then(setTplId), [surveyId])
+  const data = useLiveQuery(() => (tplId ? loadWasherCheck(surveyId, tplId) : undefined), [surveyId, tplId])
+  const fileRef = useRef<HTMLInputElement>(null)
+  const pendingShot = useRef<ShotItem | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+  if (!data) return null
+  const save = (patch: Parameters<typeof saveTemplate>[3]) =>
+    saveTemplate(surveyId, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERSION, patch).catch((e) => toast(`儲存失敗：${e instanceof Error ? e.message : e}`))
+
+  if (!data.active)
+    return (
+      <section className="border-t border-line py-4" aria-label="洗衣機現場檢查">
+        <button className="text-[13px] text-ink underline underline-offset-4" onClick={() => void save({})}>
+          啟用洗衣機／洗衣塔現場檢查
+        </button>
+      </section>
+    )
+
+  const { values: v, result: r, areas, installArea } = data
+  const set = (key: string, val: string | number | null) => void save({ values: { [key]: val } })
+
+  async function onShotFile(files: FileList | null) {
+    const shot = pendingShot.current
+    if (!files?.length || !shot) return
+    const area = areaForShot(shot, areas, installArea)
+    if (!area) return toast('請先新增場勘區域')
+    setBusy(true)
+    try {
+      for (const f of [...files]) {
+        const id = await addPhoto(area.id, await compressImage(f), shot.key)
+        await updatePhotoCaption(id, shot.label)
+      }
+      toast(`已儲存「${shot.label}」照片到「${area.name}」`)
+    } catch (e) {
+      toast(`照片無法讀取：${e instanceof Error ? e.message : e}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const findings = r!.findings
+  const visible = showAll ? findings : findings.filter((f) => f.level !== 'info')
+  return (
+    <section className="border-t border-line py-5" aria-label="洗衣機現場檢查">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-xs font-medium tracking-[0.18em] text-sub">洗衣機現場檢查</h2>
+        <span className="text-[13px] tabular-nums text-ink" data-testid="washer-score">完成度 {r!.score.percent}%</span>
+      </div>
+      {!data.hasWasher && <p className="mt-2 text-xs text-sub">尚未選擇洗衣機產品，選擇後會自動比對規格。</p>}
+
+      {/* 檢查結果 */}
+      <div className="mt-3">
+        <ResultSummary r={r!} />
+        {visible.length > 0 ? (
+          <ul className="mt-3 space-y-2" aria-label="檢查結果">{visible.map((f) => <FindingItem key={f.id} f={f} />)}</ul>
+        ) : (
+          <p className="mt-3 bg-sand px-3 py-3 text-sm text-ink">{findings.length ? '沒有需要注意的項目' : '目前沒有發現問題'}</p>
+        )}
+        {findings.some((f) => f.level === 'info') && (
+          <button className="mt-2 text-[13px] text-ink underline underline-offset-4" onClick={() => setShowAll((x) => !x)}>
+            {showAll ? '隱藏一般提醒' : `顯示一般提醒（${r!.counts.info}）`}
+          </button>
+        )}
+        <p className="mt-2 text-[11px] text-sub">規則版本 washer v{r!.rulesVersion}・預留標準：左右各 2 cm、後方 10 cm・僅供提醒，請以現場判斷為準</p>
+      </div>
+
+      {/* 安裝位置 */}
+      <div className="mt-5 space-y-1">
+        <label className="block text-[13px] text-ink" htmlFor="washer-install-area">安裝位置（使用該區域的寬深高）</label>
+        <select
+          id="washer-install-area"
+          value={installArea?.id ?? ''}
+          onChange={(e) => void save({ install_area_id: e.target.value || null })}
+          className="block h-11 w-full border border-line bg-white px-2 text-[15px]"
+        >
+          {!installArea && <option value="">請選擇</option>}
+          {areas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}（{[a.width_cm, a.depth_cm, a.height_cm].map((x) => x ?? '—').join(' × ')}）
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-sub">其他有量寬度的區域會當作搬運路線檢查（大門、走廊、電梯、樓梯）。</p>
+      </div>
+
+      {/* 模板欄位 */}
+      <div className="mt-5 space-y-6">
+        {WASHER_SECTIONS.map((sec) => (
+          <div key={sec.title}>
+            <h3 className="mb-2 border-b border-ink pb-1 text-[13px] font-medium tracking-[0.08em]">{sec.title}</h3>
+            <div className="space-y-4">
+              {sec.fields.filter((f) => SHOW_IF[f.key]?.(v) ?? true).map((f) =>
+                f.type === 'choice' ? (
+                  <ChoiceField key={f.key} f={f} value={v[f.key]} onChange={(x) => set(f.key, x)} />
+                ) : (
+                  <InputField key={f.key} f={f} value={v[f.key]} onSave={(x) => set(f.key, x)} />
+                ),
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 拍攝清單 */}
+      <div className="mt-6">
+        <h3 className="mb-2 flex items-baseline justify-between border-b border-ink pb-1 text-[13px] font-medium tracking-[0.08em]">
+          <span>拍攝清單</span>
+          <span className="font-normal tabular-nums text-sub">{WASHER_SHOTS.filter((s) => data.shotsTaken.has(s.key)).length} / {WASHER_SHOTS.length}</span>
+        </h3>
+        <ul className="divide-y divide-line">
+          {WASHER_SHOTS.map((s) => {
+            const done = data.shotsTaken.has(s.key)
+            return (
+              <li key={s.key} className="flex items-center gap-3 py-2" data-shot={s.key} data-done={done ? 1 : 0}>
+                <span className={`flex h-6 w-6 shrink-0 items-center justify-center border text-xs ${done ? 'border-ink bg-ink text-white' : 'border-line text-transparent'}`} aria-hidden>✓</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px]">{s.label}</div>
+                  <div className="truncate text-xs text-sub">{s.hint}</div>
+                </div>
+                <Button
+                  variant="secondary"
+                  className="h-10 min-h-10 px-3 text-sm"
+                  disabled={busy}
+                  aria-label={`拍攝 ${s.label}`}
+                  onClick={() => {
+                    pendingShot.current = s
+                    fileRef.current?.click()
+                  }}
+                >
+                  {Icon.camera}{done ? '再拍' : '拍照'}
+                </Button>
+              </li>
+            )
+          })}
+        </ul>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" data-testid="shot-input" onChange={(e) => { void onShotFile(e.target.files); e.target.value = '' }} />
+        <p className="mt-2 text-xs text-sub">照片會存到對應的區域，並自動填上說明。</p>
+      </div>
+    </section>
+  )
+}

@@ -4,11 +4,13 @@ import { AREA_KIND_LABEL } from '../db/types'
 import { formatDate } from '../lib/format'
 import { dimState } from '../lib/completeness'
 import { SPEC_FIELDS, SPEC_LABELS } from '../../supabase/functions/_shared/catalog/installText.ts'
+import { RISK_LABEL, RISK_ORDER, type RiskLevel } from '../rules/types'
 import {
   CONTENT_W, FOOTER_H, GAP, HEADER_H, MARGIN_BOTTOM, MARGIN_TOP, MARGIN_X, PAGE_H, PAGE_W, PHOTO_CELL_W, PHOTO_GAP,
   type Block, type ReportData, type ReportPhoto,
 } from './model'
 
+const RISK_COLOR: Record<RiskLevel, string> = { high: '#b91c1c', confirm: '#7c3aed', caution: '#b45309', info: '#4b5563' }
 const C = { ink: '#111827', text: '#1f2937', sub: '#4b5563', mute: '#9ca3af', line: '#e5e7eb', soft: '#f3f4f6', warn: '#b45309', ok: '#047857' }
 // 報告只用系統字型：網頁字型（Noto Sans TC 網路字型）轉成圖片時不會被嵌入，排版量測與輸出會用到不同字型而造成換行、重疊
 const FONT = '"Noto Sans CJK TC","PingFang TC","Microsoft JhengHei","Heiti TC","Source Han Sans TC",sans-serif'
@@ -139,6 +141,40 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
             </>
           )}
           <div style={{ fontSize: 18, color: C.mute, marginTop: 10 }}>規格來源：LG 產品知識庫（{fmtDateTime(new Date(sp.snapshot_at))} 選擇時的資料）</div>
+        </div>
+      )
+    }
+    case 'check-head': {
+      const r = d.check!
+      return (
+        <div>
+          <div style={{ fontSize: 34, fontWeight: 800, color: C.ink }}>洗衣機現場檢查</div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 14 }}>
+            {RISK_ORDER.map((l) => (
+              <div key={l} style={{ flex: 1, border: `2px solid ${r.counts[l] ? RISK_COLOR[l] : C.line}`, borderRadius: 12, padding: '8px 14px' }}>
+                <div style={{ fontSize: 20, color: C.sub, fontWeight: 600 }}>{RISK_LABEL[l]}</div>
+                <div style={{ fontSize: 40, fontWeight: 800, color: r.counts[l] ? RISK_COLOR[l] : C.mute, fontVariantNumeric: 'tabular-nums' }}>{r.counts[l]}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 20, color: C.sub, marginTop: 10 }}>
+            完成度 {r.score.percent}%・規則版本 washer v{r.rulesVersion}・預留標準：左右各 2 cm、後方 10 cm・系統提醒僅供參考，請以現場判斷為準
+          </div>
+          {r.findings.length === 0 && <div style={{ fontSize: 24, color: C.ok, marginTop: 12, fontWeight: 700 }}>未發現問題</div>}
+        </div>
+      )
+    }
+    case 'finding': {
+      const f = d.check!.findings[b.findingIndex]
+      return (
+        <div style={{ borderLeft: `6px solid ${RISK_COLOR[f.level]}`, background: f.level === 'high' ? '#fef2f2' : C.soft, borderRadius: 8, padding: '12px 18px', lineHeight: 1.45 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+            <span style={{ flexShrink: 0, fontSize: 20, fontWeight: 800, color: RISK_COLOR[f.level], whiteSpace: 'nowrap' }}>{RISK_LABEL[f.level]}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 25, fontWeight: 800, color: C.ink, wordBreak: 'break-word' }}>{f.title}</span>
+          </div>
+          <div style={{ fontSize: 21, color: C.text, marginTop: 4, wordBreak: 'break-word' }}>{f.why}</div>
+          <div style={{ fontSize: 21, color: C.ink, marginTop: 4, wordBreak: 'break-word' }}>建議：{f.suggestion}</div>
+          <div style={{ fontSize: 17, color: C.mute, marginTop: 4, wordBreak: 'break-word' }}>依據：{f.basis}</div>
         </div>
       )
     }
