@@ -97,6 +97,18 @@ describe('產品轉換', () => {
   })
 })
 
+describe('規格雜湊穩定性', () => {
+  it('新增欄位（值為 null）不影響雜湊：日後擴充欄位不會讓所有產品被誤判為規格變更', async () => {
+    const { products } = await transformProducts([row(2, { 產品型號: 'WD-S2220B 黑', 安裝尺寸: '寬70;高189;深83' })])
+    const p = products[0]
+    const filled = Object.fromEntries(Object.entries(p.specs).filter(([, v]) => v !== null))
+    const { sha256 } = await import('../../supabase/functions/_shared/catalog/transform.ts')
+    const withExtraNullField = await sha256({ specs: { ...filled }, extra: p.install_extra, raw: p.install_text_raw })
+    expect(p.spec_hash).toBe(withExtraNullField)
+    expect(Object.keys(p.specs)).toContain('door_removed_depth_cm') // 欄位存在但為 null
+  })
+})
+
 describe('一對多搭配', () => {
   const r3 = {
     室外機型號: '一對二;一對三室外機LM3U90(8.8KW)',

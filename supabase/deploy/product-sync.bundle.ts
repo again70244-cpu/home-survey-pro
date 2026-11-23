@@ -341,9 +341,10 @@ async function transformProducts(rows) {
     products.push(rec);
   }
   for (const p of products) {
-    p.spec_hash = await sha256({ specs: p.specs, extra: p.install_extra, raw: p.install_text_raw });
-    const { content_hash: _c, spec_hash: _s, source_row: _r, ...rest } = p;
-    p.content_hash = await sha256(rest);
+    const filled = Object.fromEntries(Object.entries(p.specs).filter(([, v]) => v !== null));
+    p.spec_hash = await sha256({ specs: filled, extra: p.install_extra, raw: p.install_text_raw });
+    const { content_hash: _c, spec_hash: _s, source_row: _r, specs: _sp, ...rest } = p;
+    p.content_hash = await sha256({ ...rest, specs: filled });
   }
   return { products, warnings, skippedRows };
 }

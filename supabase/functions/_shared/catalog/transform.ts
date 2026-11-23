@@ -134,9 +134,11 @@ export async function transformProducts(rows: SheetRow[]): Promise<{ products: P
   }
 
   for (const p of products) {
-    p.spec_hash = await sha256({ specs: p.specs, extra: p.install_extra, raw: p.install_text_raw })
-    const { content_hash: _c, spec_hash: _s, source_row: _r, ...rest } = p
-    p.content_hash = await sha256(rest)
+    // 只用「有值」的規格欄位計算雜湊：日後新增欄位時，沒有用到新欄位的產品不會被誤判為規格變更
+    const filled = Object.fromEntries(Object.entries(p.specs).filter(([, v]) => v !== null))
+    p.spec_hash = await sha256({ specs: filled, extra: p.install_extra, raw: p.install_text_raw })
+    const { content_hash: _c, spec_hash: _s, source_row: _r, specs: _sp, ...rest } = p
+    p.content_hash = await sha256({ ...rest, specs: filled })
   }
   return { products, warnings, skippedRows }
 }
