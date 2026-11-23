@@ -58,9 +58,9 @@ async function device(browser, catalog) {
   await p.getByRole('button', { name: '完成', exact: true }).click()
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
   const W = p.getByRole('region', { name: '洗衣機現場檢查' })
-  check(await W.getByTestId('washer-score').count() === 1, '場勘頁出現「洗衣機現場檢查」')
-  check(await W.locator('[data-finding="install:dims"]').count() === 1, '陽台尚未量尺寸 → 必須人工確認')
-  check(await W.locator('[data-finding="fields:missing"][data-level="confirm"]').count() === 1, '必要欄位未填 → 必須人工確認')
+  check(await until(async () => (await W.getByTestId('washer-score').count()) === 1), '場勘頁出現「洗衣機現場檢查」')
+  check(await until(async () => (await W.locator('[data-finding="install:dims"]').count()) === 1), '陽台尚未量尺寸 → 必須人工確認')
+  check(await until(async () => (await W.locator('[data-finding="fields:missing"][data-level="confirm"]').count()) === 1), '必要欄位未填 → 必須人工確認')
   check((await W.locator('#washer-install-area').inputValue()) !== '', '預設安裝位置為陽台')
 
   console.log('— 填寫現場尺寸與條件')

@@ -13,7 +13,8 @@ async function device(browser, who, opts = {}) {
   return { ctx, page };
 }
 const serverCount = (p, t) => p.evaluate(async ({ t, KEY, SB }) => { const k = Object.keys(localStorage).find((k) => k.includes('auth-token')); const tok = JSON.parse(localStorage.getItem(k)).access_token;
-  const r = await (await fetch(SB + '/rest/v1/' + t + '?select=id&deleted_at=is.null', { headers: { apikey: KEY, Authorization: 'Bearer ' + tok } })).json(); return r.length; }, { t, KEY, SB });
+  // 用 count=exact 取得精確總數（一般查詢最多只回傳 1000 筆，測試帳號資料累積後會數不準）
+  const r = await fetch(SB + '/rest/v1/' + t + '?select=id&deleted_at=is.null&limit=1', { headers: { apikey: KEY, Authorization: 'Bearer ' + tok, Prefer: 'count=exact' } }); return Number(r.headers.get('content-range').split('/')[1]); }, { t, KEY, SB });
 const counts = async (p) => ({ s: await serverCount(p, 'surveys'), a: await serverCount(p, 'survey_areas'), ph: await serverCount(p, 'survey_photos') });
 async function restore(p, file) {
   await p.goto(URL + '#/settings'); await p.getByRole('heading', { name: '設定' }).waitFor();
