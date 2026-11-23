@@ -5,6 +5,7 @@ import { formatDate } from '../lib/format'
 import { dimState } from '../lib/completeness'
 import { SPEC_FIELDS, SPEC_LABELS } from '../../supabase/functions/_shared/catalog/installText.ts'
 import { RISK_LABEL, RISK_ORDER, type RiskLevel } from '../rules/types'
+import { specValueOf } from '../rules/common'
 import {
   CONTENT_W, FOOTER_H, GAP, HEADER_H, MARGIN_BOTTOM, MARGIN_TOP, MARGIN_X, PAGE_H, PAGE_W, PHOTO_CELL_W, PHOTO_GAP,
   type Block, type ReportData, type ReportPhoto,
@@ -109,7 +110,10 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
     case 'product': {
       const sp = d.products[b.productIndex]
       const s = sp.spec_snapshot as Record<string, unknown>
-      const v = (f: string) => (s[f] === null || s[f] === undefined ? null : (s[f] as number))
+      // 手動修正優先（報告標示「手動」並列出原值）
+      const v = (f: string) => specValueOf(sp, f).value
+      const man = (f: string) => specValueOf(sp, f)
+      const manualFields = SPEC_FIELDS.filter((f) => man(f).manual)
       const extras = SPEC_FIELDS.filter((f) => !['width_cm', 'height_cm', 'depth_cm'].includes(f) && v(f) !== null)
       return (
         <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: '16px 20px' }}>
@@ -118,27 +122,33 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
             <div style={{ fontSize: 30, fontWeight: 800, color: C.ink }}>{sp.model_code}</div>
             <div style={{ fontSize: 21, color: C.sub, flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{sp.display_name ?? ''}</div>
           </div>
-          {s.data_quality === 'missing' ? (
+          {s.data_quality === 'missing' && !['width_cm', 'height_cm', 'depth_cm'].some((f) => v(f) !== null) ? (
             <div style={{ fontSize: 22, color: C.warn, marginTop: 10 }}>試算表未提供此產品的安裝尺寸，請現場確認</div>
           ) : (
             <>
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-                <Dim label="產品寬 W" v={v('width_cm')} big={false} />
-                <Dim label="產品高 H" v={v('height_cm')} big={false} />
-                <Dim label="產品深 D" v={v('depth_cm')} big={false} />
+                <Dim label={`產品寬 W${man('width_cm').manual ? '（手動）' : ''}`} v={v('width_cm')} big={false} />
+                <Dim label={`產品高 H${man('height_cm').manual ? '（手動）' : ''}`} v={v('height_cm')} big={false} />
+                <Dim label={`產品深 D${man('depth_cm').manual ? '（手動）' : ''}`} v={v('depth_cm')} big={false} />
               </div>
               {extras.length > 0 && (
                 <div style={{ marginTop: 10, fontSize: 21, color: C.text }}>
                   {extras.map((f) => (
                     // 一列一項：標籤可換行並撐高該列，數值不換行 → 不會重疊
                     <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, borderBottom: `1px solid ${C.line}`, padding: '7px 0', lineHeight: 1.4 }}>
-                      <span style={{ flex: 1, minWidth: 0, color: C.sub, wordBreak: 'break-word' }}>{SPEC_LABELS[f]}</span>
+                      <span style={{ flex: 1, minWidth: 0, color: C.sub, wordBreak: 'break-word' }}>{SPEC_LABELS[f]}{man(f).manual ? '（手動）' : ''}</span>
                       <span style={{ flexShrink: 0, whiteSpace: 'nowrap', fontWeight: 700 }}>{v(f)} cm</span>
                     </div>
                   ))}
                 </div>
               )}
             </>
+          )}
+          {manualFields.length > 0 && (
+            <div style={{ fontSize: 19, color: C.warn, marginTop: 10, wordBreak: 'break-word', lineHeight: 1.45 }}>
+              手動修正：{manualFields.map((f) => `${SPEC_LABELS[f]} ${v(f)} cm（知識庫 ${man(f).original ?? '未提供'}${man(f).original !== null ? ' cm' : ''}）`).join('、')}
+              {sp.spec_overrides?.note ? `；來源：${sp.spec_overrides.note}` : ''}
+            </div>
           )}
           <div style={{ fontSize: 18, color: C.mute, marginTop: 10 }}>規格來源：LG 產品知識庫（{fmtDateTime(new Date(sp.snapshot_at))} 選擇時的資料）</div>
         </div>

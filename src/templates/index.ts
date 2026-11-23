@@ -2,7 +2,7 @@
 import type { SurveyArea, SurveyProduct } from '../db/types'
 import type { CheckResult } from '../rules/types'
 import type { RuleInput, TemplateValues } from '../rules/common'
-import { productCategory } from '../rules/common'
+import { productTemplate } from '../rules/common'
 import { checkWasher, pickInstallArea } from '../rules/washer'
 import { checkFridge, pickFridgeArea } from '../rules/fridge'
 import { WASHER_SECTIONS, WASHER_SHOTS, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERSION, isWasherCategory, type ShotItem, type TemplateSection } from './washer'
@@ -87,5 +87,5 @@ export const FRIDGE: TemplateDef = {
 export const TEMPLATES: TemplateDef[] = [WASHER, FRIDGE]
 
 export function matchingProducts(def: TemplateDef, products: SurveyProduct[]) {
-  return products.filter((p) => !p.deleted_at && def.isCategory(productCategory(p)))
+  return products.filter((p) => !p.deleted_at && productTemplate(p) === def.id)
 }

@@ -458,3 +458,13 @@ export async function saveTemplate(
     await enqueue('survey_templates', id, s.user_id)
   })
 }
+
+/** 更新場勘產品的手動規格修正或適用模板（規格快照不會改變） */
+export async function updateSurveyProduct(id: string, patch: Partial<Pick<SurveyProduct, 'spec_overrides' | 'template_type'>>): Promise<void> {
+  await db.transaction('rw', db.survey_products, db.outbox, async () => {
+    const p = await db.survey_products.get(id)
+    if (!p || p.deleted_at) return
+    await db.survey_products.put({ ...p, ...patch, updated_at: nowIso(), _dirty: 1 })
+    await enqueue('survey_products', id, p.user_id)
+  })
+}

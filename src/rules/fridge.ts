@@ -10,8 +10,8 @@
  */
 import type { SurveyArea, SurveyProduct } from '../db/types'
 import { SPEC_LABELS } from '../../supabase/functions/_shared/catalog/installText.ts'
-import { FRIDGE_CLEARANCE, FRIDGE_SECTIONS, FRIDGE_SHOTS, isFridgeCategory } from '../templates/fridge'
-import { fmt, num, productCategory, specOf, unitChecks, type AddFinding, type RuleInput } from './common'
+import { FRIDGE_CLEARANCE, FRIDGE_SECTIONS, FRIDGE_SHOTS } from '../templates/fridge'
+import { fmt, manualSpecFindings, num, productTemplate, specOf, unitChecks, type AddFinding, type RuleInput } from './common'
 import { countLevels, sortFindings, type CheckResult, type Finding } from './types'
 
 export const FRIDGE_RULES_ID = 'fridge'
@@ -33,7 +33,7 @@ export function pickFridgeArea(areas: SurveyArea[], installAreaId: string | null
 }
 
 export function fridgeProducts(products: SurveyProduct[]): SurveyProduct[] {
-  return products.filter((p) => !p.deleted_at && isFridgeCategory(productCategory(p)))
+  return products.filter((p) => !p.deleted_at && productTemplate(p) === 'fridge')
 }
 
 const label = (key: string) => FRIDGE_SECTIONS.flatMap((s) => s.fields).find((f) => f.key === key)?.label ?? key
@@ -44,7 +44,8 @@ export function checkFridge(input: RuleInput): CheckResult {
   const add: AddFinding = (level, id, title, why, basis, suggestion, extra = {}) => out.push({ id, level, title, why, basis, suggestion, ...extra })
   const v = input.values
   const C = FRIDGE_CLEARANCE
-  const specs = fridgeProducts(input.products).map(specOf)
+  const products = fridgeProducts(input.products)
+  const specs = products.map(specOf)
   const area = pickFridgeArea(input.areas, input.installAreaId)
 
   // ---- 產品 ----------------------------------------------------------------
@@ -53,9 +54,10 @@ export function checkFridge(input: RuleInput): CheckResult {
   for (const s of specs) {
     const miss = ['width', 'depth', 'height'].filter((f) => s.get(f) === null)
     if (miss.length)
-      add('confirm', `spec:${s.model}`, `${s.model} 缺少機身尺寸`, '缺少產品規格時，空間判斷不可靠', `產品規格快照缺少：${miss.map(specName).join('、')}`, '依原廠型錄確認尺寸，並請管理者更新產品知識庫', { model: s.model })
+      add('confirm', `spec:${s.model}`, `${s.model} 缺少機身尺寸`, '缺少產品規格時，空間判斷不可靠', `產品規格快照缺少：${miss.map(specName).join('、')}`, '在「安裝產品」按「修正規格」輸入說明書或實測數值', { model: s.model })
   }
 
+  manualSpecFindings(add, products, RV)
   unitChecks(add, input.areas, v, ['front_clearance_cm', 'outlet_distance_cm', 'water_source_distance_cm'], label, RV)
 
   // ---- 安裝空間 ------------------------------------------------------------

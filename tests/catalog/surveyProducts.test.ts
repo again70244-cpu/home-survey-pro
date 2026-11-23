@@ -42,6 +42,15 @@ d('survey_products', () => {
     expect(r.rows[0]).toEqual({ w: '70', model_code: 'WD-S2220B', catalog_spec_hash: 'h1', sort_order: 5, revision: 2 })
   })
 
+  it('手動修正規格與適用模板可以更新；快照仍不可變；格式受檢查', async () => {
+    await c.query(`update survey_products set spec_overrides=$2, template_type='fridge', spec_snapshot='{"width_cm":99}' where id=$1`, [PID, JSON.stringify({ fields: { width_cm: 71.5 }, note: '說明書', updated_at: '2026-11-23T00:00:00Z' })])
+    const r = await c.query(`select spec_overrides->'fields'->>'width_cm' o, template_type t, spec_snapshot->>'width_cm' w from survey_products where id=$1`, [PID])
+    expect(r.rows[0]).toEqual({ o: '71.5', t: 'fridge', w: '70' })
+    await expect(c.query(`update survey_products set template_type='Bad Type' where id=$1`, [PID])).rejects.toThrow(/check/)
+    await expect(c.query(`update survey_products set spec_overrides='[1]' where id=$1`, [PID])).rejects.toThrow(/check/)
+    await c.query(`update survey_products set spec_overrides=null, template_type=null where id=$1`, [PID])
+  })
+
   it('其他帳號看不到、改不了、也無法塞資料到別人的場勘', async () => {
     await as(B)
     expect((await c.query(`select * from survey_products`)).rows).toHaveLength(0)

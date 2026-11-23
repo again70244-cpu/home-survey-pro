@@ -7,8 +7,8 @@
  */
 import type { SurveyArea, SurveyProduct } from '../db/types'
 import { SPEC_LABELS } from '../../supabase/functions/_shared/catalog/installText.ts'
-import { WASHER_CLEARANCE, WASHER_SECTIONS, WASHER_SHOTS, isWasherCategory } from '../templates/washer'
-import { fmt, num, specOf, type RuleInput } from './common'
+import { WASHER_CLEARANCE, WASHER_SECTIONS, WASHER_SHOTS } from '../templates/washer'
+import { fmt, manualSpecFindings, num, productTemplate, specOf, type RuleInput } from './common'
 import { countLevels, sortFindings, type CheckResult, type Finding, type RiskLevel } from './types'
 
 export const WASHER_RULES_ID = 'washer'
@@ -30,7 +30,7 @@ export function pickInstallArea(areas: SurveyArea[], installAreaId: string | nul
 
 /** 適用此模板的產品（依分類） */
 export function washerProducts(products: SurveyProduct[]): SurveyProduct[] {
-  return products.filter((p) => !p.deleted_at && isWasherCategory(p.category ?? (p.spec_snapshot?.category as string | null)))
+  return products.filter((p) => !p.deleted_at && productTemplate(p) === 'washer')
 }
 
 export function checkWasher(input: WasherInput): CheckResult {
@@ -54,8 +54,10 @@ export function checkWasher(input: WasherInput): CheckResult {
   for (const s of specs) {
     const miss = ['width', 'depth', 'height'].filter((f) => s.get(f) === null)
     if (miss.length)
-      add('confirm', `spec:${s.model}`, `${s.model} 缺少機身尺寸`, '缺少產品規格時，空間判斷不可靠', `產品規格快照缺少：${miss.map(fieldName).join('、')}`, '依原廠型錄確認尺寸，並請管理者更新產品知識庫', { model: s.model })
+      add('confirm', `spec:${s.model}`, `${s.model} 缺少機身尺寸`, '缺少產品規格時，空間判斷不可靠', `產品規格快照缺少：${miss.map(fieldName).join('、')}`, '在「安裝產品」按「修正規格」輸入說明書或實測數值', { model: s.model })
   }
+
+  manualSpecFindings(add, products, RV)
 
   // ---- 不合理數值（單位輸入錯誤） --------------------------------------------
   for (const a of input.areas.filter((x) => !x.deleted_at)) {

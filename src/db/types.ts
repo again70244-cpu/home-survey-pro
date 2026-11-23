@@ -75,6 +75,18 @@ export interface SurveyProduct extends BaseRow {
   catalog_spec_hash: string | null
   catalog_spec_updated_at: string | null
   sort_order: number
+  /** 只屬於這筆場勘的手動規格修正（快照不變；檢查與報告以修正值優先） */
+  spec_overrides?: SpecOverrides | null
+  /** 適用的現場檢查模板：washer、fridge…；'none' = 不檢查；null = 依分類自動判斷 */
+  template_type?: string | null
+}
+
+export interface SpecOverrides {
+  /** 欄位名稱同規格快照（width_cm…），單位公分 */
+  fields: Record<string, number>
+  /** 資料來源，例如「說明書」「現場實測」 */
+  note?: string | null
+  updated_at: string
 }
 
 /** 規格快照內容（保存選擇當下產品知識庫的資料） */
