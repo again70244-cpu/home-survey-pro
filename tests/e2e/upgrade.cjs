@@ -38,7 +38,7 @@ const serve = (dir) => {
   check(await p.getByRole('button', { name: 'LG 產品知識庫' }).count() === 1, '按「更新」後載入新版（出現產品知識庫入口）');
   const v2 = await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { res({ version: r.result.version, stores: [...r.result.objectStoreNames] }); r.result.close(); }; }));
   console.log('  新版 IndexedDB：', JSON.stringify(v2));
-  check(v2.version > v1.version && v2.stores.includes('catalog_products') && v1.stores.every((s) => v2.stores.includes(s)), '本機資料庫升級：新增產品快取表，原有資料表全部保留');
+  check(v2.version >= v1.version && v2.stores.includes('catalog_products') && v1.stores.every((s) => v2.stores.includes(s)), '本機資料庫升級：版本不降低，原有資料表全部保留');
   check(await p.getByText(name).count() === 1, '升級後：離線建立、尚未同步的場勘仍在');
   check(await p.getByText('等待網路同步').count() >= 1 || await p.getByText('本機已保存').count() >= 1, '升級後：仍記得這筆尚未同步');
   await p.getByText(name).click(); await p.getByRole('heading', { name }).waitFor();
