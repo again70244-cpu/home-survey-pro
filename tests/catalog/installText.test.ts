@@ -106,4 +106,59 @@ describe('安裝尺寸解析', () => {
     expect(r.specs.height_cm).toBeNull()
     expect(r.quality).toBe('needs_review')
   })
+
+  // ---- 實際試算表中出現的格式（2026-11 同步預覽回報的 13 筆待確認） ----
+  it('冰箱 R723MB：門開90度總深＋總寬、電源線附註', () => {
+    const r = parseInstallText('寬83;高179;深75\n門開90度總深125 總寬85\n電源線長度160(插頭+總線長)')
+    expect(r.specs).toMatchObject({ door_open_90_depth_cm: 125, door_open_90_width_cm: 85, power_cable_cm: 160 })
+    expect(r.conditions).toContainEqual({ field: 'power_cable_cm', value_cm: 160, condition: '插頭+總線長', source: '電源線長度160(插頭+總線長)' })
+    expect(r.unparsed).toEqual([])
+    expect(r.quality).toBe('complete')
+  })
+
+  it('冰箱 GV-NB61BG：拆門總深', () => {
+    const r = parseInstallText('寬91.3;高179;深73.5\n門開90度總深105.7 總寬129\n拆門總深63.5')
+    expect(r.specs).toMatchObject({ door_open_90_depth_cm: 105.7, door_open_90_width_cm: 129, door_removed_depth_cm: 63.5 })
+    expect(r.quality).toBe('complete')
+  })
+
+  it('冰箱 GR-AQC82BS：抽屜全開總深與「全開總深」分開', () => {
+    const r = parseInstallText('寬91.2;高179;深73.5\n門開90度總深126 總寬144.2\n抽屜全開總深140.6\n拆門總深76.4')
+    expect(r.specs.drawer_open_depth_cm).toBe(140.6)
+    expect(r.specs.full_open_depth_cm).toBeNull()
+    expect(r.specs.door_removed_depth_cm).toBe(76.4)
+    expect(r.quality).toBe('complete')
+  })
+
+  it('電視 OLED42C6PTA：深度含底座 → 數值照填，保留附註', () => {
+    const r = parseInstallText('寬93.2;高54;深17(含底座)')
+    expect(r.specs).toMatchObject({ width_cm: 93.2, height_cm: 54, depth_cm: 17 })
+    expect(r.conditions).toEqual([{ field: 'depth_cm', value_cm: 17, condition: '含底座', source: '寬93.2;高54;深17(含底座)' }])
+    expect(r.quality).toBe('complete')
+  })
+
+  it('單獨出現的「總寬」含義不明 → 整行列為無法辨識，不猜', () => {
+    const r = parseInstallText('寬83;高179;深75\n總寬85')
+    expect(r.specs.door_open_90_width_cm).toBeNull()
+    expect(r.unparsed).toEqual(['總寬85'])
+    expect(r.quality).toBe('needs_review')
+  })
+
+  it('一行中只要有一段看不懂，整行不採用（避免只取一半）', () => {
+    const r = parseInstallText('寬83;高179;深75\n門開90度總深125 約略寬度85')
+    expect(r.specs.door_open_90_depth_cm).toBeNull()
+    expect(r.unparsed).toEqual(['門開90度總深125 約略寬度85'])
+  })
+
+  it('乘號、斜線分隔的尺寸', () => {
+    expect(parseInstallText('寬70*高189*深83').specs).toMatchObject({ width_cm: 70, height_cm: 189, depth_cm: 83 })
+    expect(parseInstallText('寬70/高189/深83').specs).toMatchObject({ width_cm: 70, height_cm: 189, depth_cm: 83 })
+  })
+
+  it('缺少本體深度的電視 → 維持待確認，不推測', () => {
+    const r = parseInstallText('寬186;高106.7')
+    expect(r.specs.depth_cm).toBeNull()
+    expect(r.quality).toBe('needs_review')
+  })
 })
+

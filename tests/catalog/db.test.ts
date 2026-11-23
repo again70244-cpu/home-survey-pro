@@ -1,7 +1,7 @@
 /**
  * 資料庫 RPC 測試（需要本機 PostgreSQL；未設定 CATALOG_TEST_PG 時自動略過）
  *   CATALOG_TEST_PG="postgres://postgres@/t?host=/var/tmp/hsp-pg&port=54329" npx vitest run tests/catalog/db.test.ts
- * 資料庫需先依序執行：supabase/tests/supabase_stub.sql、init migration、patch、product_catalog migration
+ * 資料庫需先依序執行：supabase/tests/supabase_stub.sql、init migration、patch、product_catalog、catalog_more_specs migration
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import pg from 'pg'
@@ -158,12 +158,22 @@ d('catalog_apply_snapshot', () => {
     expect((await q("select count(*)::int n from catalog_products where dataset='production' and is_active"))[0].n).toBe(6)
   })
 
+  it('冰箱新欄位：門開90度總寬、拆門總深、抽屜全開總深都寫入資料庫', async () => {
+    const fridge = P(20, 'GR-AQC82BS 冰箱', '冰箱', '寬91.2;高179;深73.5\n門開90度總深126 總寬144.2\n抽屜全開總深140.6\n拆門總深76.4\n電源線長度160(插頭+總線長)')
+    const r = await apply([...BASE, fridge])
+    expect(r.status).toBe('success')
+    const [f] = await q("select door_open_90_depth_cm, door_open_90_width_cm, door_removed_depth_cm, drawer_open_depth_cm, full_open_depth_cm, power_cable_cm, data_quality, install_extra->'conditions' c from catalog_products where dataset='production' and model_code='GR-AQC82BS'")
+    expect(f).toMatchObject({ door_open_90_depth_cm: '126.0', door_open_90_width_cm: '144.2', door_removed_depth_cm: '76.4', drawer_open_depth_cm: '140.6', full_open_depth_cm: null, power_cable_cm: '160.0', data_quality: 'complete' })
+    expect(f.c[0].condition).toBe('插頭+總線長')
+    BASE.push(fridge)
+  })
+
   it('權限：登入使用者只能讀 production；不能寫、不能呼叫同步；匿名完全不能讀', async () => {
     await client.query('reset role')
     await client.query('set role authenticated')
     const rows = await q('select model_code from catalog_products')
     expect(rows.some((r) => r.model_code === 'ZZ-TEST1')).toBe(false)
-    expect(rows.length).toBe(6)
+    expect(rows.length).toBe(7)
     await expect(client.query("insert into catalog_products (source_key, model_code, model_raw, content_hash, spec_hash) values ('x','x','x','x','x')")).rejects.toThrow(/permission denied/)
     await expect(client.query("update catalog_products set category='hacked'")).rejects.toThrow(/permission denied/)
     await expect(client.query("select public.catalog_apply_snapshot('{}'::jsonb)")).rejects.toThrow(/permission denied/)

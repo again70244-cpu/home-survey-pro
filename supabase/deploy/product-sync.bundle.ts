@@ -8,7 +8,10 @@ var SPEC_FIELDS = [
   "height_cm",
   "depth_cm",
   "door_open_90_depth_cm",
+  "door_open_90_width_cm",
+  "door_removed_depth_cm",
   "full_open_depth_cm",
+  "drawer_open_depth_cm",
   "full_open_height_cm",
   "door_clearance_cm",
   "power_cable_cm",
@@ -24,7 +27,10 @@ var SPEC_LABELS = {
   height_cm: "\u9AD8",
   depth_cm: "\u6DF1",
   door_open_90_depth_cm: "\u9580\u958B 90 \u5EA6\u7E3D\u6DF1",
+  door_open_90_width_cm: "\u9580\u958B 90 \u5EA6\u7E3D\u5BEC",
+  door_removed_depth_cm: "\u62C6\u9580\u7E3D\u6DF1",
   full_open_depth_cm: "\u5168\u958B\u7E3D\u6DF1",
+  drawer_open_depth_cm: "\u62BD\u5C5C\u5168\u958B\u7E3D\u6DF1",
   full_open_height_cm: "\u5168\u958B\u7E3D\u9AD8",
   door_clearance_cm: "\u958B\u9580\u6240\u9700\u7A7A\u9593",
   power_cable_cm: "\u96FB\u6E90\u7DDA\u9577\u5EA6",
@@ -41,8 +47,7 @@ function emptySpecs() {
 function toHalfWidth(s) {
   return s.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)).replace(/　/g, " ").replace(/\r\n?/g, "\n");
 }
-var NUM = String.raw`(\d+(?:\.\d+)?)`;
-var UNIT = String.raw`\s*(cm|mm|m|公分|公釐|毫米|釐米|厘米|米)?`;
+var round = (v) => Math.round(v * 10) / 10;
 function toCm(num, unit) {
   const v = Number(num);
   if (!Number.isFinite(v) || v < 0) return null;
@@ -53,90 +58,91 @@ function toCm(num, unit) {
   if (u === "m" || u === "\u7C73") return [round(v * 100), false];
   return null;
 }
-var round = (v) => Math.round(v * 10) / 10;
-var LINE_RULES = [
-  { field: "door_open_90_depth_cm", re: new RegExp(String.raw`^門開\s*90\s*度?\s*(?:總深|總深度|深度)\s*[:：]?\s*${NUM}${UNIT}$`) },
-  { field: "full_open_depth_cm", re: new RegExp(String.raw`^全開\s*(?:總深|總深度)\s*[:：]?\s*${NUM}${UNIT}\s*(?:\(([^)]*)\))?$`), condition: true },
-  { field: "full_open_height_cm", re: new RegExp(String.raw`^全開\s*(?:總高|總高度)\s*[:：]?\s*${NUM}${UNIT}\s*(?:\(([^)]*)\))?$`), condition: true },
-  { field: "door_clearance_cm", re: new RegExp(String.raw`^開門\s*(?:所需)?\s*空間\s*[:：]?\s*${NUM}${UNIT}$`) },
-  { field: "power_cable_cm", re: new RegExp(String.raw`^電源線\s*(?:長度|長)?\s*[:：]?\s*${NUM}${UNIT}$`) },
-  {
-    field: "inlet_drain_hose_cm",
-    re: new RegExp(String.raw`^進排水管\s*(?:長度|長)?\s*[:：]?\s*${NUM}${UNIT}$`),
-    note: "\u300C\u9032\u6392\u6C34\u7BA1\u9577\u5EA6\u300D\u539F\u6587\u672A\u5340\u5206\u9032\u6C34\u7BA1\u6216\u6392\u6C34\u7BA1\uFF0C\u672A\u62C6\u5206\u70BA\u5169\u500B\u6578\u503C"
-  },
-  { field: "water_inlet_hose_cm", re: new RegExp(String.raw`^進水管\s*(?:長度|長)?\s*[:：]?\s*${NUM}${UNIT}$`) },
-  { field: "drain_hose_cm", re: new RegExp(String.raw`^排水管\s*(?:長度|長)?\s*[:：]?\s*${NUM}${UNIT}$`) }
+var LABELS = [
+  { re: /門開\s*90\s*度?\s*(?:總深度|總深|深度)/y, field: "door_open_90_depth_cm", ctx: "door90" },
+  { re: /門開\s*90\s*度?\s*(?:總寬度|總寬|寬度)/y, field: "door_open_90_width_cm", ctx: "door90" },
+  { re: /拆門\s*(?:後)?\s*(?:總深度|總深|深度|深)/y, field: "door_removed_depth_cm" },
+  { re: /抽屜\s*全開\s*(?:總深度|總深)/y, field: "drawer_open_depth_cm" },
+  { re: /全開\s*(?:總深度|總深)/y, field: "full_open_depth_cm" },
+  { re: /全開\s*(?:總高度|總高)/y, field: "full_open_height_cm" },
+  { re: /開門\s*(?:所需)?\s*空間/y, field: "door_clearance_cm" },
+  { re: /電源線\s*(?:長度|長)?/y, field: "power_cable_cm" },
+  { re: /進排水管\s*(?:長度|長)?/y, field: "inlet_drain_hose_cm", note: "\u300C\u9032\u6392\u6C34\u7BA1\u9577\u5EA6\u300D\u539F\u6587\u672A\u5340\u5206\u9032\u6C34\u7BA1\u6216\u6392\u6C34\u7BA1\uFF0C\u672A\u62C6\u5206\u70BA\u5169\u500B\u6578\u503C" },
+  { re: /進水管\s*(?:長度|長)?/y, field: "water_inlet_hose_cm" },
+  { re: /排水管\s*(?:長度|長)?/y, field: "drain_hose_cm" },
+  // 只在「門開90度」之後才有明確意義
+  { re: /(?:總寬度|總寬)/y, field: (ctx) => ctx === "door90" ? "door_open_90_width_cm" : null },
+  { re: /(?:總深度|總深)/y, field: (ctx) => ctx === "door90" ? "door_open_90_depth_cm" : null }
 ];
-var DIM_KEY = { \u5BEC: "w", \u5BEC\u5EA6: "w", \u9AD8: "h", \u9AD8\u5EA6: "h", \u6DF1: "d", \u6DF1\u5EA6: "d" };
-function parseDimTriple(text) {
-  const parts = text.split(/[;,、/*×\s]+/).filter(Boolean);
-  if (!parts.length) return null;
-  const out = {};
-  for (const p of parts) {
-    const m = p.match(new RegExp(String.raw`^(寬度|高度|深度|寬|高|深)\s*[:：]?\s*${NUM}${UNIT}$`));
-    if (!m) return null;
-    const k = DIM_KEY[m[1]];
-    const v = toCm(m[2], m[3]);
-    if (!v || out[k]) return null;
-    out[k] = v;
+var DIM_LABELS = { \u5BEC\u5EA6: "w", \u5BEC: "w", \u9AD8\u5EA6: "h", \u9AD8: "h", \u6DF1\u5EA6: "d", \u6DF1: "d" };
+var VALUE = /\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(cm|mm|m|公分|公釐|毫米|釐米|厘米|米)?\s*(?:\(([^()]*)\))?/y;
+var SEP = /[\s;,、/*×]+/y;
+function tokenizeLine(line, dimFields) {
+  const out = [];
+  let pos = 0;
+  let ctx = null;
+  const at = (re) => {
+    re.lastIndex = pos;
+    const m = re.exec(line);
+    if (m) pos = re.lastIndex;
+    return m;
+  };
+  while (pos < line.length) {
+    if (at(SEP)) continue;
+    let field = null;
+    let note;
+    if (dimFields) {
+      const m = at(/(寬度|高度|深度|寬|高|深)/y);
+      if (m) field = dimFields[DIM_LABELS[m[1]]];
+    } else {
+      for (const l of LABELS) {
+        if (!at(l.re)) continue;
+        field = typeof l.field === "function" ? l.field(ctx) : l.field;
+        if (l.ctx) ctx = l.ctx;
+        note = l.note;
+        break;
+      }
+    }
+    if (!field) return null;
+    const v = at(VALUE);
+    if (!v) return null;
+    const value = toCm(v[1], v[2]);
+    if (!value) return null;
+    out.push({ field, value, qualifier: v[3]?.trim() || null, note });
   }
-  return out;
+  return out.length ? out : null;
 }
+var BODY = { w: "width_cm", h: "height_cm", d: "depth_cm" };
+var PACKAGE = { w: "package_width_cm", h: "package_height_cm", d: "package_depth_cm" };
 function parseInstallText(raw) {
   const specs = emptySpecs();
   const res = { specs, conditions: [], unparsed: [], issues: [], notes: [], unitAssumed: false, quality: "missing" };
   const text = toHalfWidth(raw ?? "").trim();
   if (!text) return res;
   let parsedCount = 0;
-  const set = (field, v, line) => {
-    if (v[1]) res.unitAssumed = true;
-    if (specs[field] !== null && specs[field] !== v[0]) {
-      res.issues.push({ code: "conflict", field, line, message: `${SPEC_LABELS[field]}\u51FA\u73FE\u5169\u500B\u4E0D\u540C\u6578\u503C\uFF08${specs[field]}\u3001${v[0]}\uFF09\uFF0C\u9700\u4EBA\u5DE5\u78BA\u8A8D` });
+  const set = (t, line) => {
+    const { field, value } = t;
+    if (value[1]) res.unitAssumed = true;
+    if (specs[field] !== null && specs[field] !== value[0]) {
+      res.issues.push({ code: "conflict", field, line, message: `${SPEC_LABELS[field]}\u51FA\u73FE\u5169\u500B\u4E0D\u540C\u6578\u503C\uFF08${specs[field]}\u3001${value[0]}\uFF09\uFF0C\u9700\u4EBA\u5DE5\u78BA\u8A8D` });
       specs[field] = null;
       return;
     }
-    specs[field] = v[0];
+    specs[field] = value[0];
     parsedCount++;
+    if (t.qualifier) res.conditions.push({ field, value_cm: value[0], condition: t.qualifier, source: line });
+    if (t.note && !res.notes.includes(t.note)) res.notes.push(t.note);
   };
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  for (const line of lines) {
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
     const compact = line.replace(/\s+/g, " ");
     const pkg = compact.match(/^外箱\s*(?:尺寸)?\s*[:：]?\s*(.+)$/);
-    if (pkg) {
-      const t = parseDimTriple(pkg[1]);
-      if (t && (t.w || t.h || t.d)) {
-        if (t.w) set("package_width_cm", t.w, line);
-        if (t.h) set("package_height_cm", t.h, line);
-        if (t.d) set("package_depth_cm", t.d, line);
-        continue;
-      }
-    }
-    const body = parseDimTriple(compact);
-    if (body && (body.w || body.h || body.d)) {
-      if (body.w) set("width_cm", body.w, line);
-      if (body.h) set("height_cm", body.h, line);
-      if (body.d) set("depth_cm", body.d, line);
+    const tokens = pkg ? tokenizeLine(pkg[1], PACKAGE) : tokenizeLine(compact, BODY) ?? tokenizeLine(compact, null);
+    if (tokens) {
+      tokens.forEach((t) => set(t, line));
       continue;
     }
-    let hit = false;
-    for (const rule of LINE_RULES) {
-      const m = compact.match(rule.re);
-      if (!m) continue;
-      const v = toCm(m[1], m[2]);
-      if (!v) {
-        res.issues.push({ code: "bad_number", field: rule.field, line, message: `${SPEC_LABELS[rule.field]}\u6578\u503C\u7121\u6CD5\u8FA8\u8B58` });
-      } else {
-        set(rule.field, v, line);
-        if (rule.condition && m[3]?.trim()) {
-          res.conditions.push({ field: rule.field, value_cm: v[0], condition: m[3].trim(), source: line });
-        }
-        if (rule.note && !res.notes.includes(rule.note)) res.notes.push(rule.note);
-      }
-      hit = true;
-      break;
-    }
-    if (hit) continue;
     res.unparsed.push(line);
     res.issues.push({ code: "unrecognized", line, message: "\u7121\u6CD5\u8FA8\u8B58\u7684\u5167\u5BB9\uFF08\u539F\u6587\u4FDD\u7559\uFF0C\u9700\u4EBA\u5DE5\u78BA\u8A8D\uFF09" });
   }
