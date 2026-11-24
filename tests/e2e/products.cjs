@@ -105,6 +105,8 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   check(/寬\s*71/.test(await p.getByLabel('安裝資訊').innerText()), '產品知識庫已更新為寬 71')
   await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
   await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).waitFor({ timeout: 15000 })
+  // 「產品資料已更新」提示要等本機產品知識庫載入後才出現，先等它再讀取
+  await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).getByText(/產品資料已於/).waitFor({ timeout: 15000 }).catch(() => {})
   const old = await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).innerText()
   check(/寬\s*70/.test(old) && !/寬\s*71/.test(old), '舊案件仍是選擇當時的寬 70（快照不變）')
   check(old.includes('產品資料已於') && old.includes('此案件保留選擇當時的規格'), '舊案件提示「產品資料已更新，保留選擇當時的規格」')
