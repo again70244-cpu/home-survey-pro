@@ -1,6 +1,7 @@
 import type { Survey, SurveyArea, SurveyPhoto, SurveyProduct } from '../db/types'
 import { surveySummary, type SurveySummary } from '../lib/completeness'
 import type { CheckResult } from '../rules/types'
+import type { CustomerItem } from './customerText'
 
 /** A4 直式（CSS px）：1240 × 1754，輸出時 pixelRatio 2 → 2480 × 3508 */
 export const PAGE_W = 1240
@@ -33,6 +34,12 @@ export type Block =
   | { kind: 'product'; key: string; productIndex: number }
   | { kind: 'check-head'; key: string; checkIndex: number }
   | { kind: 'finding'; key: string; checkIndex: number; findingIndex: number }
+  | { kind: 'pending'; key: string }
+  | { kind: 'check-fields'; key: string; checkIndex: number; sectionIndex: number }
+  | { kind: 'check-shots'; key: string; checkIndex: number }
+  | { kind: 'customer-head'; key: string; checkIndex: number }
+  | { kind: 'customer-item'; key: string; checkIndex: number; itemIndex: number }
+  | { kind: 'customer-final'; key: string }
   | { kind: 'area-head'; key: string; areaIndex: number; startsArea: true }
   | { kind: 'area-cont'; key: string; areaIndex: number }
   | { kind: 'area-notes'; key: string; areaIndex: number; text: string; first: boolean }
@@ -40,10 +47,23 @@ export type Block =
   | { kind: 'no-photo'; key: string; areaIndex: number }
   | { kind: 'final'; key: string }
 
+export type ReportVariant = 'installer' | 'customer'
+export const VARIANT_LABEL: Record<ReportVariant, string> = { installer: '施工版', customer: '客戶版' }
+
 export interface ReportCheck {
+  templateId: string
   title: string
   note: string
   result: CheckResult
+  /** 安裝位置區域（null = 尚未指定） */
+  installAreaId: string | null
+  installAreaName: string | null
+  /** 客戶版：改寫成客戶看得懂的項目 */
+  customer: CustomerItem[]
+  /** 現場欄位（已套用顯示條件） */
+  fields: { title: string; rows: { label: string; value: string | null }[] }[]
+  /** 拍攝清單（已套用顯示條件） */
+  shots: { label: string; done: boolean }[]
 }
 
 export interface ReportData {
@@ -55,10 +75,11 @@ export interface ReportData {
   products: SurveyProduct[]
   /** 已啟用的現場檢查（洗衣機、冰箱…）結果 */
   checks: ReportCheck[]
+  variant: ReportVariant
   generatedAt: Date
 }
 
-export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = [], checks: ReportCheck[] = []): ReportData {
+export function buildReportData(survey: Survey, areas: SurveyArea[], photos: SurveyPhoto[], urls: Map<string, string | null>, products: SurveyProduct[] = [], checks: ReportCheck[] = [], variant: ReportVariant = 'installer'): ReportData {
   const live = photos.filter((p) => !p.deleted_at)
   const photosByArea = new Map<string, ReportPhoto[]>()
   for (const a of areas) {
@@ -68,7 +89,12 @@ export function buildReportData(survey: Survey, areas: SurveyArea[], photos: Sur
       .map((p, i) => ({ id: p.id, url: urls.get(p.id) ?? null, width: p.width ?? 4, height: p.height ?? 3, caption: p.caption, index: i + 1 }))
     photosByArea.set(a.id, list)
   }
-  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products, checks }
+  return { survey, areas, photosByArea, summary: surveySummary(areas, live, !!survey._dirty), generatedAt: new Date(), products, checks, variant }
+}
+
+/** 施工前待處理：所有檢查中的高風險與必須人工確認 */
+export function pendingItems(d: ReportData) {
+  return d.checks.flatMap((c) => c.result.findings.filter((f) => f.level === 'high' || f.level === 'confirm').map((f) => ({ check: c.title, f })))
 }
 
 /** 照片列高度：依照片比例縮放到欄寬，取兩張中較高者，上限 PHOTO_MAX_H（不裁切，object-fit: contain） */
@@ -95,24 +121,59 @@ function splitNotes(text: string): string[] {
   return out
 }
 
-export function buildBlocks(d: ReportData): Block[] {
-  const blocks: Block[] = [{ kind: 'cover', key: 'cover' }, { kind: 'summary-head', key: 'sum-h' }]
-  d.areas.forEach((_, i) => blocks.push({ kind: 'summary-row', key: `sum-${i}`, areaIndex: i }))
-  d.products.forEach((_, i) => blocks.push({ kind: 'product', key: `prod-${i}`, productIndex: i }))
-  d.checks.forEach((c, ci) => {
-    blocks.push({ kind: 'check-head', key: `chk-h-${ci}`, checkIndex: ci })
-    c.result.findings.forEach((_, i) => blocks.push({ kind: 'finding', key: `chk-${ci}-${i}`, checkIndex: ci, findingIndex: i }))
-  })
-  d.areas.forEach((a, i) => {
+/** 客戶版顯示的區域：有啟用檢查時只放安裝位置；否則全部 */
+export function customerAreaIndexes(d: ReportData): number[] {
+  const ids = new Set(d.checks.map((c) => c.installAreaId).filter(Boolean))
+  const idx = d.areas.map((_, i) => i)
+  return ids.size ? idx.filter((i) => ids.has(d.areas[i].id)) : idx
+}
+
+function areaBlocks(d: ReportData, blocks: Block[], indexes: number[], withNotes: boolean) {
+  for (const i of indexes) {
+    const a = d.areas[i]
     blocks.push({ kind: 'area-head', key: `ah-${i}`, areaIndex: i, startsArea: true })
-    if (a.notes) splitNotes(a.notes).forEach((t, k) => blocks.push({ kind: 'area-notes', key: `an-${i}-${k}`, areaIndex: i, text: t, first: k === 0 }))
+    if (withNotes && a.notes) splitNotes(a.notes).forEach((t, k) => blocks.push({ kind: 'area-notes', key: `an-${i}-${k}`, areaIndex: i, text: t, first: k === 0 }))
     const ph = d.photosByArea.get(a.id) ?? []
     if (!ph.length) blocks.push({ kind: 'no-photo', key: `np-${i}`, areaIndex: i })
     for (let k = 0; k < ph.length; k += 2) {
       const row = ph.slice(k, k + 2)
       blocks.push({ kind: 'photo-row', key: `pr-${i}-${k}`, areaIndex: i, photos: row, height: photoRowHeight(row) })
     }
+  }
+}
+
+/**
+ * 客戶版：不放電話地址、內部檢查明細、現場欄位、區域備註與整體備註
+ * 只放主要尺寸、改寫後的「需要調整／需要配合」事項、安裝位置的照片
+ */
+function buildCustomerBlocks(d: ReportData): Block[] {
+  const idx = customerAreaIndexes(d)
+  const blocks: Block[] = [{ kind: 'cover', key: 'cover' }, { kind: 'summary-head', key: 'sum-h' }]
+  idx.forEach((i) => blocks.push({ kind: 'summary-row', key: `sum-${i}`, areaIndex: i }))
+  d.products.forEach((_, i) => blocks.push({ kind: 'product', key: `prod-${i}`, productIndex: i }))
+  d.checks.forEach((c, ci) => {
+    blocks.push({ kind: 'customer-head', key: `cu-h-${ci}`, checkIndex: ci })
+    c.customer.forEach((_, i) => blocks.push({ kind: 'customer-item', key: `cu-${ci}-${i}`, checkIndex: ci, itemIndex: i }))
   })
+  areaBlocks(d, blocks, idx, false)
+  blocks.push({ kind: 'customer-final', key: 'final' })
+  return blocks
+}
+
+export function buildBlocks(d: ReportData): Block[] {
+  if (d.variant === 'customer') return buildCustomerBlocks(d)
+  const blocks: Block[] = [{ kind: 'cover', key: 'cover' }, { kind: 'summary-head', key: 'sum-h' }]
+  d.areas.forEach((_, i) => blocks.push({ kind: 'summary-row', key: `sum-${i}`, areaIndex: i }))
+  d.products.forEach((_, i) => blocks.push({ kind: 'product', key: `prod-${i}`, productIndex: i }))
+  // 施工版：先列出施工前需要處理或確認的項目（高風險、必須人工確認）
+  if (pendingItems(d).length) blocks.push({ kind: 'pending', key: 'pending' })
+  d.checks.forEach((c, ci) => {
+    blocks.push({ kind: 'check-head', key: `chk-h-${ci}`, checkIndex: ci })
+    c.result.findings.forEach((_, i) => blocks.push({ kind: 'finding', key: `chk-${ci}-${i}`, checkIndex: ci, findingIndex: i }))
+    c.fields.forEach((_, si) => blocks.push({ kind: 'check-fields', key: `chk-f-${ci}-${si}`, checkIndex: ci, sectionIndex: si }))
+    if (c.shots.length) blocks.push({ kind: 'check-shots', key: `chk-s-${ci}`, checkIndex: ci })
+  })
+  areaBlocks(d, blocks, d.areas.map((_, i) => i), true)
   blocks.push({ kind: 'final', key: 'final' })
   return blocks
 }
@@ -124,7 +185,8 @@ export function buildBlocks(d: ReportData): Block[] {
  * - 區域跨頁時，新頁面加上「（續）」標題
  * - 不產生空白頁
  */
-export function paginate(blocks: Block[], heights: Map<string, number>, contHeight: number): Block[][] {
+export function paginate(blocks: Block[], heights: Map<string, number>, contHeight: number, opts: { areasOnNewPage?: boolean } = {}): Block[][] {
+  const areasOnNewPage = opts.areasOnNewPage ?? true
   const pages: Block[][] = []
   let page: Block[] = []
   let used = 0
@@ -145,7 +207,7 @@ export function paginate(blocks: Block[], heights: Map<string, number>, contHeig
 
     if (b.kind === 'area-head') {
       // 區域內容從封面之後的新頁開始
-      if (firstArea) {
+      if (firstArea && areasOnNewPage) {
         push()
         firstArea = false
       }

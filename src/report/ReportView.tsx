@@ -8,7 +8,7 @@ import { RISK_LABEL, RISK_ORDER, type RiskLevel } from '../rules/types'
 import { specValueOf } from '../rules/common'
 import {
   CONTENT_W, FOOTER_H, GAP, HEADER_H, MARGIN_BOTTOM, MARGIN_TOP, MARGIN_X, PAGE_H, PAGE_W, PHOTO_CELL_W, PHOTO_GAP,
-  type Block, type ReportData, type ReportPhoto,
+  pendingItems, VARIANT_LABEL, type Block, type ReportData, type ReportPhoto,
 } from './model'
 
 const RISK_COLOR: Record<RiskLevel, string> = { high: '#b91c1c', confirm: '#7c3aed', caution: '#b45309', info: '#4b5563' }
@@ -69,13 +69,16 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
     case 'cover':
       return (
         <div>
-          <div style={{ fontSize: 22, letterSpacing: 6, color: C.sub, fontWeight: 600 }}>HOME APPLIANCE SITE SURVEY</div>
-          <div style={{ fontSize: 64, fontWeight: 800, color: C.ink, marginTop: 6 }}>家電場勘紀錄</div>
+          <div style={{ fontSize: 22, letterSpacing: 6, color: C.sub, fontWeight: 600 }}>{d.variant === 'installer' ? 'INSTALLATION SITE SURVEY' : 'HOME APPLIANCE SITE SURVEY'}</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 18, marginTop: 6 }}>
+            <div style={{ fontSize: 64, fontWeight: 800, color: C.ink }}>{d.variant === 'installer' ? '施工場勘單' : '家電場勘紀錄'}</div>
+            <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', background: C.ink, borderRadius: 8, padding: '4px 14px', whiteSpace: 'nowrap' }}>{VARIANT_LABEL[d.variant]}</div>
+          </div>
           <div style={{ height: 4, width: 96, background: C.ink, margin: '20px 0 16px' }} />
           <InfoRow label="客戶姓名" value={s.customer_name} />
           <InfoRow label="場勘日期" value={s.survey_date ? formatDate(s.survey_date) : null} />
-          <InfoRow label="聯絡電話" value={s.customer_phone} />
-          <InfoRow label="客戶地址" value={s.customer_address} />
+          {d.variant === 'installer' && <InfoRow label="聯絡電話" value={s.customer_phone} />}
+          {d.variant === 'installer' && <InfoRow label="客戶地址" value={s.customer_address} />}
           <InfoRow label="產品型號" value={s.product_model} />
         </div>
       )
@@ -84,10 +87,12 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
       return (
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 34, fontWeight: 800, color: C.ink }}>場勘摘要</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: sum.complete ? C.ok : C.warn }}>
-              {sum.complete ? '✓ 場勘完整' : `尚未完成・${sum.completeAreas}/${sum.areas.length} 區完成`}
-            </div>
+            <div style={{ fontSize: 34, fontWeight: 800, color: C.ink }}>{d.variant === 'customer' ? '現場測量尺寸' : '場勘摘要'}</div>
+            {d.variant === 'installer' && (
+              <div style={{ fontSize: 24, fontWeight: 700, color: sum.complete ? C.ok : C.warn }}>
+                {sum.complete ? '✓ 場勘完整' : `尚未完成・${sum.completeAreas}/${sum.areas.length} 區完成`}
+              </div>
+            )}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr 0.8fr', fontSize: 21, color: C.sub, fontWeight: 600, padding: '14px 12px', background: C.soft, borderRadius: 10, marginTop: 14 }}>
             <div>區域</div><div>寬</div><div>深</div><div>高</div><div style={{ textAlign: 'right' }}>照片</div>
@@ -114,7 +119,7 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
       const v = (f: string) => specValueOf(sp, f).value
       const man = (f: string) => specValueOf(sp, f)
       const manualFields = SPEC_FIELDS.filter((f) => man(f).manual)
-      const extras = SPEC_FIELDS.filter((f) => !['width_cm', 'height_cm', 'depth_cm'].includes(f) && v(f) !== null)
+      const extras = d.variant === 'customer' ? [] : SPEC_FIELDS.filter((f) => !['width_cm', 'height_cm', 'depth_cm'].includes(f) && v(f) !== null)
       return (
         <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, padding: '16px 20px' }}>
           {b.productIndex === 0 && <div style={{ fontSize: 34, fontWeight: 800, color: C.ink, margin: '-2px 0 14px' }}>安裝產品規格</div>}
@@ -144,13 +149,106 @@ export function BlockView({ b, d }: { b: Block; d: ReportData }) {
               )}
             </>
           )}
-          {manualFields.length > 0 && (
+          {manualFields.length > 0 && d.variant === 'installer' && (
             <div style={{ fontSize: 19, color: C.warn, marginTop: 10, wordBreak: 'break-word', lineHeight: 1.45 }}>
               手動修正：{manualFields.map((f) => `${SPEC_LABELS[f]} ${v(f)} cm（知識庫 ${man(f).original ?? '未提供'}${man(f).original !== null ? ' cm' : ''}）`).join('、')}
               {sp.spec_overrides?.note ? `；來源：${sp.spec_overrides.note}` : ''}
             </div>
           )}
           <div style={{ fontSize: 18, color: C.mute, marginTop: 10 }}>規格來源：LG 產品知識庫（{fmtDateTime(new Date(sp.snapshot_at))} 選擇時的資料）</div>
+        </div>
+      )
+    }
+    case 'customer-head': {
+      const c = d.checks[b.checkIndex]
+      const adjust = c.customer.filter((x) => x.kind === 'adjust').length
+      const prepare = c.customer.length - adjust
+      const confirm = c.result.counts.confirm
+      const [color, text] = adjust
+        ? [RISK_COLOR.high, `有 ${adjust} 個地方需要調整後才能安裝`]
+        : prepare
+          ? [C.warn, `可以安裝，有 ${prepare} 件事需要您配合或留意`]
+          : [C.ok, '目前評估可以正常安裝']
+      return (
+        <div>
+          <div style={{ fontSize: 34, fontWeight: 800, color: C.ink }}>{c.title.replace('現場檢查', '')}安裝評估</div>
+          <div style={{ fontSize: 30, fontWeight: 800, color, marginTop: 10 }}>{text}</div>
+          {confirm > 0 && <div style={{ fontSize: 22, color: C.sub, marginTop: 6 }}>另有部分細節，安裝人員會在安裝前與您確認。</div>}
+        </div>
+      )
+    }
+    case 'customer-item': {
+      const it = d.checks[b.checkIndex].customer[b.itemIndex]
+      const adj = it.kind === 'adjust'
+      return (
+        <div style={{ borderLeft: `6px solid ${adj ? RISK_COLOR.high : C.warn}`, background: adj ? '#fef2f2' : C.soft, borderRadius: 8, padding: '12px 18px', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 19, fontWeight: 800, color: adj ? RISK_COLOR.high : C.warn }}>{adj ? '需要調整' : '需要您配合'}</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: C.ink, marginTop: 2, wordBreak: 'break-word' }}>{it.text}</div>
+          <div style={{ fontSize: 23, color: C.text, marginTop: 4, wordBreak: 'break-word' }}>{it.action}</div>
+        </div>
+      )
+    }
+    case 'customer-final':
+      return (
+        <div style={{ borderTop: `3px solid ${C.ink}`, paddingTop: 18 }}>
+          <div style={{ fontSize: 24, color: C.text, lineHeight: 1.6 }}>
+            以上評估依據現場測量與產品規格，實際安裝以安裝人員現場判斷為準。如有任何問題，歡迎隨時與我們聯絡。
+          </div>
+          <div style={{ fontSize: 22, color: C.sub, marginTop: 20 }}>報告產生時間：{fmtDateTime(d.generatedAt)}</div>
+        </div>
+      )
+    case 'pending': {
+      const items = pendingItems(d)
+      return (
+        <div style={{ border: `3px solid ${RISK_COLOR.high}`, borderRadius: 12, padding: '16px 20px' }}>
+          <div style={{ fontSize: 32, fontWeight: 800, color: RISK_COLOR.high }}>施工前待處理（{items.length} 項）</div>
+          <div style={{ fontSize: 20, color: C.sub, marginTop: 2 }}>高風險需先排除；「必須人工確認」請在安裝前向客戶或現場再確認</div>
+          <div style={{ marginTop: 10 }}>
+            {items.map(({ check, f }, i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'baseline', padding: '7px 0', borderBottom: `1px solid ${C.line}`, lineHeight: 1.4 }}>
+                <span style={{ flexShrink: 0, width: 150, fontSize: 19, fontWeight: 800, color: RISK_COLOR[f.level], whiteSpace: 'nowrap' }}>{RISK_LABEL[f.level]}</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 22, color: C.ink, fontWeight: 700, wordBreak: 'break-word' }}>{f.title}</span>
+                <span style={{ flexShrink: 0, fontSize: 18, color: C.mute, whiteSpace: 'nowrap' }}>{check.replace('現場檢查', '')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    case 'check-fields': {
+      const c = d.checks[b.checkIndex]
+      const sec = c.fields[b.sectionIndex]
+      return (
+        <div>
+          {b.sectionIndex === 0 && (
+            <div style={{ fontSize: 28, fontWeight: 800, color: C.ink, marginBottom: 6 }}>
+              {c.title.replace('現場檢查', '')}現場條件<span style={{ fontSize: 21, fontWeight: 600, color: C.sub, marginLeft: 14 }}>安裝位置：{c.installAreaName ?? '尚未指定'}</span>
+            </div>
+          )}
+          <div style={{ fontSize: 21, fontWeight: 700, color: C.sub, borderBottom: `2px solid ${C.ink}`, paddingBottom: 4 }}>{sec.title}</div>
+          {sec.rows.map((r) => (
+            <div key={r.label} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', borderBottom: `1px solid ${C.line}`, padding: '7px 0', fontSize: 22, lineHeight: 1.4 }}>
+              <span style={{ flex: 1, minWidth: 0, color: C.sub, wordBreak: 'break-word' }}>{r.label}</span>
+              <span style={{ flexShrink: 0, maxWidth: '55%', textAlign: 'right', fontWeight: 700, color: r.value ? C.ink : C.warn, wordBreak: 'break-word' }}>{r.value ?? '未填寫'}</span>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    case 'check-shots': {
+      const c = d.checks[b.checkIndex]
+      const done = c.shots.filter((s) => s.done).length
+      return (
+        <div>
+          <div style={{ fontSize: 21, fontWeight: 700, color: C.sub, borderBottom: `2px solid ${C.ink}`, paddingBottom: 4 }}>拍攝清單（{done} / {c.shots.length}）</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 12px', marginTop: 10 }}>
+            {c.shots.map((s) => (
+              <span key={s.label} style={{ fontSize: 20, padding: '4px 12px', borderRadius: 999, border: `2px solid ${s.done ? C.ok : C.line}`, color: s.done ? C.ok : C.warn, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {s.done ? '✓ ' : '未拍 '}{s.label}
+              </span>
+            ))}
+          </div>
+          <div style={{ fontSize: 18, color: C.mute, marginTop: 8 }}>照片依區域列在後面頁面，說明欄即拍攝項目名稱</div>
         </div>
       )
     }
@@ -265,7 +363,7 @@ export const ReportPage = forwardRef<HTMLDivElement, { blocks: Block[]; d: Repor
   return (
     <div ref={ref} style={style}>
       <div style={{ position: 'absolute', left: MARGIN_X, right: MARGIN_X, top: MARGIN_TOP, height: HEADER_H - 34, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: `1px solid ${C.line}`, fontSize: 20, color: C.sub }}>
-        <div><b style={{ color: C.ink }}>家電場勘紀錄</b>・客戶：{d.survey.customer_name}</div>
+        <div><b style={{ color: C.ink }}>家電場勘紀錄・{VARIANT_LABEL[d.variant]}</b>・客戶：{d.survey.customer_name}</div>
         <div>{d.survey.survey_date ? formatDate(d.survey.survey_date) : ''}</div>
       </div>
       <div style={{ position: 'absolute', left: MARGIN_X, top: MARGIN_TOP + HEADER_H, width: CONTENT_W, display: 'flex', flexDirection: 'column', gap: GAP }}>

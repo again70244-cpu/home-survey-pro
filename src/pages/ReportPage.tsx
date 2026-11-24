@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toBlob } from 'html-to-image'
 import { db } from '../db/db'
 import { useUserId } from '../auth/AuthProvider'
@@ -10,8 +10,9 @@ import { buildBlocks, buildReportData, CONTENT_H, paginate, PAGE_H, PAGE_W, type
 import { BlockView, MeasureBox, ReportPage as PageView } from '../report/ReportView'
 import { loadTemplateCheck } from '../components/TemplateCheck'
 import { templateRowId } from '../db/repo'
-import { TEMPLATES } from '../templates'
-import type { ReportCheck } from '../report/model'
+import { describeValues, TEMPLATES } from '../templates'
+import { customerItems } from '../report/customerText'
+import { VARIANT_LABEL, type ReportCheck, type ReportVariant } from '../report/model'
 import { canShareFiles, downloadAll, downloadBlob, safeName, shareFiles, zipFiles } from '../report/share'
 
 /** 報告用照片：長邊 1800px、JPEG 0.92（輸出 2 倍解析度時欄寬約 1070px，清晰不糊） */
@@ -32,6 +33,8 @@ type Stage = { step: 'loading' | 'measuring' | 'rendering' | 'done' | 'error'; m
 
 export function ReportPage() {
   const { id } = useParams()
+  const [params, setParams] = useSearchParams()
+  const variant: ReportVariant = params.get('v') === 'customer' ? 'customer' : 'installer'
   const userId = useUserId()
   const nav = useNavigate()
   const toast = useToast()
@@ -74,10 +77,21 @@ export function ReportPage() {
         const products = (await db.survey_products.where('survey_id').equals(id!).toArray()).filter((p) => !p.deleted_at).sort((a, b) => a.sort_order - b.sort_order)
         const checks: ReportCheck[] = []
         for (const def of TEMPLATES) {
-          const r = (await loadTemplateCheck(def, id!, await templateRowId(id!, def.id))).result
-          if (r) checks.push({ title: def.title, note: def.note, result: r })
+          const c = await loadTemplateCheck(def, id!, await templateRowId(id!, def.id))
+          if (!c.result) continue
+          checks.push({
+            templateId: def.id,
+            title: def.title,
+            note: def.note,
+            result: c.result,
+            installAreaId: c.installArea?.id ?? null,
+            installAreaName: c.installArea?.name ?? null,
+            customer: customerItems(def.id, c.result.findings, areas),
+            fields: describeValues(def, c.values),
+            shots: def.shots.filter((s) => s.when?.(c.values) ?? true).map((s) => ({ label: s.label, done: c.shotsTaken.has(s.key) })),
+          })
         }
-        const d = buildReportData(survey, areas, photos, urls, products, checks)
+        const d = buildReportData(survey, areas, photos, urls, products, checks, variant)
         setMissingPhotos(missing)
         setData(d)
         setBlocks(buildBlocks(d))
@@ -90,7 +104,7 @@ export function ReportPage() {
       alive = false
       urlsToRevoke.current.forEach((u) => URL.revokeObjectURL(u))
     }
-  }, [id, userId])
+  }, [id, userId, variant])
 
   // 2. 量測每個區塊高度 → 分頁
   useLayoutEffect(() => {
@@ -99,10 +113,11 @@ export function ReportPage() {
       const h = new Map<string, number>()
       for (const b of blocks) h.set(b.key, Math.ceil(measureRefs.current.get(b.key)?.getBoundingClientRect().height ?? 0))
       const contH = Math.ceil(contRef.current?.getBoundingClientRect().height ?? 40)
-      setPages(paginate(blocks, h, contH))
+      // 客戶版頁數少：區域照片接在後面，不另起新頁
+      setPages(paginate(blocks, h, contH, { areasOnNewPage: data?.variant !== 'customer' }))
       setStage({ step: 'rendering', done: 0 })
     })
-  }, [stage.step, blocks])
+  }, [stage.step, blocks, data])
 
   // 3. 逐頁轉成 PNG
   useEffect(() => {
@@ -111,7 +126,7 @@ export function ReportPage() {
     ;(async () => {
       try {
         const out: File[] = []
-        const base = `場勘報告_${safeName(data.survey.customer_name)}_${data.survey.survey_date ?? ''}`
+        const base = `場勘報告_${VARIANT_LABEL[data.variant]}_${safeName(data.survey.customer_name)}_${data.survey.survey_date ?? ''}`
         for (let i = 0; i < pages.length; i++) {
           const node = pageRefs.current[i]
           if (!node) throw new Error('頁面尚未準備好')
@@ -137,7 +152,7 @@ export function ReportPage() {
   }, [stage.step, pages, data])
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews])
 
-  const title = data ? `${data.survey.customer_name} 場勘報告` : '場勘報告'
+  const title = data ? `${data.survey.customer_name} 場勘報告（${VARIANT_LABEL[data.variant]}）` : '場勘報告'
   const shareSupported = files.length > 0 && canShareFiles(files)
 
   async function onShare() {
@@ -151,7 +166,7 @@ export function ReportPage() {
 
   async function onZip() {
     const z = await zipFiles(files.map((f) => ({ name: f.name, blob: f })))
-    downloadBlob(z, `場勘報告_${safeName(data!.survey.customer_name)}.zip`)
+    downloadBlob(z, `場勘報告_${VARIANT_LABEL[data!.variant]}_${safeName(data!.survey.customer_name)}.zip`)
   }
 
   return (
@@ -159,6 +174,25 @@ export function ReportPage() {
       <TopBar left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}返回</IconButton>} />
       <main className="mx-auto max-w-2xl space-y-4 px-6">
         <PageTitle eyebrow="REPORT" title="場勘報告" />
+        <div className="grid grid-cols-2 border border-ink" role="tablist" aria-label="報告版本">
+          {(['installer', 'customer'] as const).map((v) => (
+            <button
+              key={v}
+              role="tab"
+              aria-selected={variant === v}
+              disabled={stage.step !== 'done' && stage.step !== 'error'}
+              onClick={() => {
+                if (v === variant) return
+                setFiles([]); setPreviews([]); setPages(null); setBlocks([]); setData(null); setStage({ step: 'loading' })
+                setParams(v === 'installer' ? {} : { v }, { replace: true })
+              }}
+              className={`h-12 text-[15px] disabled:opacity-50 ${variant === v ? 'bg-ink text-white' : 'bg-white text-ink active:bg-sand'}`}
+            >
+              {VARIANT_LABEL[v]}
+              <span className="ml-1.5 text-xs opacity-70">{v === 'installer' ? '給安裝人員' : '給客戶'}</span>
+            </button>
+          ))}
+        </div>
         {stage.step === 'error' && <ErrorBox>產生報告失敗：{stage.msg}</ErrorBox>}
         {stage.step !== 'done' && stage.step !== 'error' && (
           <div className="border-y border-line py-10 text-center">
@@ -209,7 +243,7 @@ export function ReportPage() {
       )}
 
       {/* 離屏排版區：量測與轉圖用，不顯示在畫面上 */}
-      <div aria-hidden style={{ position: 'fixed', left: -20000, top: 0, pointerEvents: 'none' }}>
+      <div aria-hidden data-report-pages style={{ position: 'fixed', left: -20000, top: 0, pointerEvents: 'none' }}>
         {data && stage.step === 'measuring' && (
           <MeasureBox>
             {blocks.map((b) => (
@@ -224,7 +258,7 @@ export function ReportPage() {
             )}
           </MeasureBox>
         )}
-        {data && pages && stage.step === 'rendering' &&
+        {data && pages && (stage.step === 'rendering' || stage.step === 'done') &&
           pages.map((blks, i) => <PageView key={i} ref={(el) => void (pageRefs.current[i] = el)} blocks={blks} d={data} page={i + 1} total={pages.length} />)}
       </div>
     </div>

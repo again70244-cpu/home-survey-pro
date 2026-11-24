@@ -89,3 +89,19 @@ export const TEMPLATES: TemplateDef[] = [WASHER, FRIDGE]
 export function matchingProducts(def: TemplateDef, products: SurveyProduct[]) {
   return products.filter((p) => !p.deleted_at && productTemplate(p) === def.id)
 }
+
+/** 報告用：把模板欄位值轉成「標籤：顯示值」（依欄位顯示條件略過不適用的欄位） */
+export function describeValues(def: TemplateDef, values: TemplateValues): { title: string; rows: { label: string; value: string | null }[] }[] {
+  return def.sections.map((sec) => ({
+    title: sec.title,
+    rows: sec.fields
+      .filter((f) => def.showIf[f.key]?.(values) ?? true)
+      .map((f) => {
+        const v = values[f.key]
+        if (v === null || v === undefined || v === '') return { label: f.label, value: null }
+        if (f.type === 'choice') return { label: f.label, value: f.options?.find((o) => o.value === v)?.label ?? String(v) }
+        if (f.type === 'cm') return { label: f.label, value: `${v} cm` }
+        return { label: f.label, value: String(v) }
+      }),
+  }))
+}
