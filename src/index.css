@@ -121,3 +121,69 @@ input, textarea, select { font-size: 16px; } /* 避免 iOS 聚焦時自動放大
 }
 /* 按下時的回饋 */
 .glass:active, .glass-dark:active { transform: scale(0.98); }
+
+/* ---------------------------------------------------------------------------
+ * 動畫（全部 120～500ms，只用位移／縮放／透明度；系統開啟「減少動態效果」時全部停用）
+ * ------------------------------------------------------------------------- */
+button.glass, a.glass, button.glass-dark, a.glass-dark { position: relative; overflow: hidden; isolation: isolate; }
+.glass, .glass-dark { transition: transform 100ms ease-out, box-shadow 200ms ease-out, background-color 200ms, color 200ms; }
+.glass:active, .glass-dark:active { transform: scale(0.96); }
+
+/* 點擊光波（由 lib/motion.ts 產生） */
+.hsp-ripple { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 9999px; pointer-events: none; z-index: -1; animation: hsp-ripple 450ms ease-out forwards; }
+.glass-dark .hsp-ripple { background: rgb(103 232 249 / 0.55); }
+.glass .hsp-ripple { background: rgb(255 255 255 / 0.28); }
+@keyframes hsp-ripple { from { transform: scale(0); opacity: 0.9; } to { transform: scale(18); opacity: 0; } }
+.glass-dark.hsp-glow { animation: hsp-glow 450ms ease-out; }
+@keyframes hsp-glow { 35% { box-shadow: 0 0 0 6px rgb(103 232 249 / 0.35), 0 10px 44px rgb(103 232 249 / 0.55), inset 0 1px 0 #fff; } }
+
+/* 選項選中：輕彈一下 */
+.glass-dark[aria-checked="true"], .glass-dark[aria-selected="true"], .glass-dark[aria-pressed="true"] { animation: hsp-pop 220ms cubic-bezier(.2, .8, .2, 1.4); }
+@keyframes hsp-pop { 50% { transform: scale(1.06); } }
+
+/* 展開的內容：淡入並往下滑開 */
+.hsp-reveal { animation: hsp-reveal 260ms cubic-bezier(.2, .8, .2, 1); }
+@keyframes hsp-reveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* 換步驟：由右（下一步）或由左（上一步）滑入 */
+.hsp-in-r { animation: hsp-in-r 260ms cubic-bezier(.2, .8, .2, 1); }
+.hsp-in-l { animation: hsp-in-l 260ms cubic-bezier(.2, .8, .2, 1); }
+@keyframes hsp-in-r { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes hsp-in-l { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+
+/* 彈入（照片縮圖、完成圖示） */
+.hsp-pop-in { animation: hsp-pop-in 360ms cubic-bezier(.2, .8, .2, 1.3) both; }
+@keyframes hsp-pop-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+/* 勾勾線條畫出 */
+.hsp-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: hsp-draw 360ms ease-out 260ms forwards; }
+@keyframes hsp-draw { to { stroke-dashoffset: 0; } }
+/* 光暈擴散 */
+.hsp-burst { animation: hsp-burst 700ms ease-out 200ms both; }
+@keyframes hsp-burst { from { opacity: 0.9; transform: scale(0.6); } to { opacity: 0; transform: scale(2.2); } }
+/* 拍照白光 */
+.hsp-flash { animation: hsp-flash 240ms ease-out forwards; }
+@keyframes hsp-flash { 30% { opacity: 0.85; } to { opacity: 0; } }
+
+/* 燈號依序亮起；高風險燈呼吸 */
+.hsp-tile { animation: hsp-tile 320ms cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes hsp-tile { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.hsp-breathe { animation: hsp-breathe 2s ease-in-out infinite; }
+@keyframes hsp-breathe { 50% { transform: scale(1.18); box-shadow: 0 0 22px rgb(255 93 93); } }
+
+/* 提示訊息：由下滑入 */
+.hsp-toast { animation: hsp-toast 300ms cubic-bezier(.2, .8, .2, 1); }
+@keyframes hsp-toast { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+/* 「已儲存」浮出後淡出 */
+.hsp-saved { animation: hsp-saved 1200ms ease-out forwards; }
+@keyframes hsp-saved { from { opacity: 0; transform: translateY(4px); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; } to { opacity: 0; } }
+/* 輸入框聚焦：冰藍光 */
+.hsp-focus { transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms; }
+.hsp-focus:focus-within { border-color: rgb(103 232 249 / 0.8) !important; box-shadow: 0 0 0 4px rgb(103 232 249 / 0.15), 0 0 24px rgb(103 232 249 / 0.25); }
+/* 同步中轉圈 */
+.hsp-spin { animation: hsp-spin 900ms linear infinite; }
+@keyframes hsp-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  .hsp-ripple { display: none; }
+}

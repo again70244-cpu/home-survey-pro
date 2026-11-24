@@ -52,6 +52,7 @@ export function allStepStatus(def: TemplateDef, d: FieldData) {
 function DimInput({ area, k, autoFocus }: { area: SurveyArea; k: DimKey; autoFocus?: boolean }) {
   const [text, setText] = useState(area[k] == null ? '' : String(area[k]))
   const [err, setErr] = useState('')
+  const [saved, setSaved] = useState(0)
   const editing = useRef(false)
   useEffect(() => {
     if (!editing.current) setText(area[k] == null ? '' : String(area[k]))
@@ -62,14 +63,14 @@ function DimInput({ area, k, autoFocus }: { area: SurveyArea; k: DimKey; autoFoc
     if (!r.ok) return setErr(r.error)
     setErr('')
     setText(r.value == null ? '' : String(r.value))
-    if (r.value !== area[k]) void updateArea(area.id, { [k]: r.value })
+    if (r.value !== area[k]) void updateArea(area.id, { [k]: r.value }).then(() => setSaved((n) => n + 1))
   }
   const filled = text.trim() !== ''
   return (
-    <label className={`block rounded-[18px] border-2 px-3 py-2.5 ${filled ? 'border-ink/80 bg-white/[0.09]' : 'border-transparent bg-white/[0.05]'}`}>
+    <label className={`hsp-focus block rounded-[18px] border-2 px-3 py-2.5 ${filled ? 'border-ink/80 bg-white/[0.09]' : 'border-transparent bg-white/[0.05]'}`}>
       <span className="flex items-baseline justify-between text-[13px] text-sub">
         <span>{DIM_LABEL[k]}</span>
-        {err && <span className="text-red-700">{err}</span>}
+        {err ? <span className="text-red-700">{err}</span> : saved > 0 && <span key={saved} className="hsp-saved text-[12px] text-[#86efac]" aria-hidden>✓ 已儲存</span>}
       </span>
       <input
         data-field-dim={k}
@@ -135,7 +136,7 @@ function BigField({ f, value, onSave }: { f: TemplateField; value: unknown; onSa
     <label className="block">
       <span className="mb-2.5 block text-[18px] text-ink">{f.label}{f.required && <span className="ml-1 text-oak">*</span>}</span>
       {f.hint && <span className="-mt-1.5 mb-2.5 block text-[13px] text-sub">{f.hint}</span>}
-      <span className={`flex items-baseline gap-2 rounded-[18px] border-2 px-4 py-2.5 ${text ? 'border-ink/80 bg-white/[0.09]' : 'border-transparent bg-white/[0.05]'}`}>
+      <span className={`hsp-focus flex items-baseline gap-2 rounded-[18px] border-2 px-4 py-2.5 ${text ? 'border-ink/80 bg-white/[0.09]' : 'border-transparent bg-white/[0.05]'}`}>
         <input
           data-field={f.key}
           inputMode={f.type === 'cm' ? 'decimal' : undefined}
@@ -157,7 +158,7 @@ function BigField({ f, value, onSave }: { f: TemplateField; value: unknown; onSa
 function Thumb({ p }: { p: SurveyPhoto }) {
   const { url } = usePhotoUrl(p.id)
   return (
-    <span className="relative block h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl bg-sand-2">
+    <span className="hsp-pop-in relative block h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl bg-sand-2">
       {url && <img src={url} alt={p.caption ?? ''} className="h-full w-full object-cover" />}
       <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] text-canvas" aria-hidden>✓</span>
     </span>
@@ -181,6 +182,8 @@ export function FieldPage() {
   const [tplId, setTplId] = useState<string | null>(null)
   const [passage, setPassage] = useState<Passage | null>(null)
   const [busy, setBusy] = useState(false)
+  const [flash, setFlash] = useState(0)
+  const prevIdx = useRef<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const pending = useRef<{ shot: ShotItem; areaId: string } | null>(null)
   useEffect(() => void (def && templateRowId(id!, def.id).then(setTplId)), [id, def])
@@ -196,6 +199,12 @@ export function FieldPage() {
   useEffect(() => {
     window.scrollTo(0, 0) // 新版瀏覽器的 scrollTo 會回傳 Promise，不能直接當成 effect 的回傳值
   }, [stepParam])
+
+  // 換步驟的方向：往後由右滑入，往前由左滑入
+  const dir = prevIdx.current === null || idx === -1 || idx >= prevIdx.current ? 'r' : 'l'
+  useEffect(() => {
+    prevIdx.current = idx
+  }, [idx])
 
   const statuses = useMemo(() => (def && data ? allStepStatus(def, data) : []), [def, data])
 
@@ -220,6 +229,7 @@ export function FieldPage() {
         const pid = await addPhoto(p.areaId, await compressImage(f), p.shot.key)
         await updatePhotoCaption(pid, p.shot.label)
       }
+      setFlash((n) => n + 1)
       toast(`已儲存「${p.shot.label}」照片`)
     } catch (e) {
       toast(`照片無法讀取：${e instanceof Error ? e.message : e}`)
@@ -245,7 +255,7 @@ export function FieldPage() {
             data-step-state={i === idx ? 'current' : statuses[i]?.done ? 'done' : 'todo'}
             className="flex h-5 items-center"
           >
-            <span className={`block h-1 w-full rounded-full ${statuses[i]?.done ? 'bg-accent shadow-[0_0_8px_rgb(103_232_249/0.6)]' : i === idx ? 'bg-ink/60' : 'bg-white/[0.12]'}`} />
+            <span className={`block h-1 w-full rounded-full transition-[background-color,box-shadow] duration-300 ${statuses[i]?.done ? 'bg-accent shadow-[0_0_8px_rgb(103_232_249/0.6)]' : i === idx ? 'bg-ink/60' : 'bg-white/[0.12]'}`} />
           </button>
         ))}
       </div>
@@ -267,8 +277,11 @@ export function FieldPage() {
         </header>
         <main className="mx-auto max-w-2xl space-y-3 px-4">
           <div className="px-1.5 py-2 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-canvas shadow-[0_0_30px_rgb(103_232_249/0.45)]" aria-hidden>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+            <div className="relative mx-auto h-16 w-16" aria-hidden>
+              <span className="hsp-burst absolute inset-0 rounded-full bg-[radial-gradient(circle,rgb(103_232_249/0.55),transparent_70%)]" />
+              <div className="hsp-pop-in absolute inset-0 flex items-center justify-center rounded-full bg-accent text-canvas shadow-[0_0_30px_rgb(103_232_249/0.45)]">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path className="hsp-draw" d="M5 12l5 5 9-10" /></svg>
+              </div>
             </div>
             <h1 className="mt-3.5 text-[28px] font-normal" data-testid="field-done-title">現場拍攝完成 {doneCount} / {steps.length}</h1>
             <p className="mt-1.5 text-[15px] text-ink/75">
@@ -370,7 +383,8 @@ export function FieldPage() {
         {Progress}
       </header>
 
-      <main className="mx-auto max-w-2xl space-y-3.5 px-4" aria-label={`步驟 ${step.title}`}>
+      {flash > 0 && <div key={flash} className="hsp-flash pointer-events-none fixed inset-0 z-50 bg-white opacity-0" aria-hidden />}
+      <main key={step.key} className={`mx-auto max-w-2xl space-y-3.5 px-4 hsp-in-${dir}`} aria-label={`步驟 ${step.title}`}>
         <div className="px-1.5 pt-1">
           <h1 className="text-[30px] font-normal leading-tight">{step.title}</h1>
           <p className="mt-1.5 text-[15px] leading-relaxed text-ink/75">{step.hint}</p>

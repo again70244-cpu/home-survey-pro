@@ -206,7 +206,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden className={expanded ? 'rotate-180' : ''}><path d="M6 9l6 6 6-6" /></svg>
       </button>
 
-      {expanded && (<>
+      {expanded && (<div className="hsp-reveal">
       {/* 安裝位置 */}
       <div className="mt-5 space-y-1">
         <label className="block text-[13px] text-ink" htmlFor={`${def.id}-install-area`}>安裝位置（使用該區域的寬深高）</label>
@@ -292,7 +292,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
         <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" data-testid="shot-input" onChange={(e) => { void onShotFile(e.target.files); e.target.value = '' }} />
         <p className="mt-2 text-xs text-sub">照片會存到對應的區域，並自動填上說明。</p>
       </div>
-      </>)}
+      </div>)}
     </section>
   )
 }

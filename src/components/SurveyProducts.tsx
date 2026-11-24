@@ -37,7 +37,7 @@ function SpecEditor({ sp, onClose }: { sp: SurveyProduct; onClose: () => void })
     onClose()
   }
   return (
-    <div className="mt-3 rounded-2xl border border-white/[0.12] bg-white/[0.07] p-3" role="group" aria-label={`修正 ${sp.model_code} 規格`}>
+    <div className="hsp-reveal mt-3 rounded-2xl border border-white/[0.12] bg-white/[0.07] p-3" role="group" aria-label={`修正 ${sp.model_code} 規格`}>
       <p className="text-xs text-sub">只影響這筆場勘的檢查與報告；產品知識庫不會改變。空白 = 使用產品知識庫的數值。</p>
       {SPEC_GROUPS.map((g) => (
         <div key={g.title} className="mt-3">

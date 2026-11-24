@@ -173,7 +173,7 @@ export function AreaList({ surveyId, sum }: { surveyId: string; sum: SurveySumma
                   </span>
                   <span className={`shrink-0 text-sub transition ${isOpen ? 'rotate-90' : ''}`} aria-hidden>{Icon.chevron}</span>
                 </button>
-                {isOpen && <div className="-mx-1 pb-2"><AreaEditorCard s={s} index={i} total={list.length} sorting={false} /></div>}
+                {isOpen && <div className="hsp-reveal -mx-1 pb-2"><AreaEditorCard s={s} index={i} total={list.length} sorting={false} /></div>}
               </li>
             )
           })}

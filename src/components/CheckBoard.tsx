@@ -102,7 +102,7 @@ export function CheckBoard({
     <div className="mt-3">
       {/* 一行結論 */}
       <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3" data-testid={`${def.id}-verdict`} data-state={v.state}>
-        <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${DOT[v.state]}`} aria-hidden />
+        <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${DOT[v.state]} ${v.state === 'high' ? 'hsp-breathe' : ''}`} aria-hidden />
         <span className={`flex-1 text-[16px] ${TEXT[v.state]}`}>{v.text}</span>
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-1 text-[13px] tabular-nums" aria-label="檢查結果統計">
@@ -113,7 +113,7 @@ export function CheckBoard({
 
       {/* 燈號格 */}
       <div className="mt-3 grid grid-cols-4 gap-2" role="tablist" aria-label="檢查類別">
-        {lights.map((l) => {
+        {lights.map((l, i) => {
           const on = sel === l.group.key
           return (
             <button
@@ -125,9 +125,10 @@ export function CheckBoard({
               data-light={l.group.key}
               data-state={l.state}
               onClick={() => setSel(on ? null : l.group.key)}
-              className={`flex flex-col items-center gap-1.5 rounded-2xl border px-1 py-2.5 transition ${on ? 'border-accent/60 bg-white/[0.1]' : 'border-white/10 bg-white/[0.04] active:bg-white/[0.08]'}`}
+              style={{ animationDelay: `${i * 40}ms` }}
+              className={`hsp-tile flex flex-col items-center gap-1.5 rounded-2xl border px-1 py-2.5 transition ${on ? 'border-accent/60 bg-white/[0.1]' : 'border-white/10 bg-white/[0.04] active:bg-white/[0.08]'}`}
             >
-              <span className={`h-3.5 w-3.5 rounded-full ${DOT[l.state]}`} aria-hidden />
+              <span className={`h-3.5 w-3.5 rounded-full ${DOT[l.state]} ${l.state === 'high' ? 'hsp-breathe' : ''}`} aria-hidden />
               <span className="text-[13px] text-ink">{l.group.label}</span>
               <span className={`text-[11px] ${TEXT[l.state]}`}>{LIGHT_LABEL[l.state]}{l.findings.length > 1 ? ` ${l.findings.length}` : ''}</span>
             </button>
@@ -147,7 +148,7 @@ export function CheckBoard({
       </div>
 
       {/* 選取類別的說明（全部結果都在結構中，依等級排序；只顯示選取的類別） */}
-      <ul className={selected ? 'mt-3 space-y-2' : 'hidden'} aria-label="檢查結果">
+      <ul key={sel ?? 'none'} className={selected ? 'hsp-reveal mt-3 space-y-2' : 'hidden'} aria-label="檢查結果">
         {result.findings.map((f) => (
           <li key={f.id} hidden={groupOf.get(f.id) !== sel} className={`rounded-2xl border px-3.5 py-2.5 ${ITEM[f.level]}`} data-finding={f.id} data-level={f.level}>
             <div className="text-[11px] tracking-[0.12em] text-sub">{RISK_LABEL[f.level]}</div>

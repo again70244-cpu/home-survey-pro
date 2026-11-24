@@ -6,6 +6,8 @@ import { TEMPLATES, type TemplateDef } from '../templates'
 import { allStepStatus, loadField } from '../pages/FieldPage'
 import { Icon } from './ui'
 
+const RING = 2 * Math.PI * 28
+
 /** 場勘頁最上方：現場拍攝進度與「開始／繼續」按鈕（只在該模板已啟用時顯示） */
 function FieldCard({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
   const nav = useNavigate()
@@ -19,14 +21,20 @@ function FieldCard({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
   const nextIdx = st.findIndex((s) => !s.done)
   const next = nextIdx >= 0 ? def.steps[nextIdx] : null
   const noPhoto = st.filter((s) => s.photoMissing).length
-  const deg = Math.round((done / total) * 360)
   const shortTitle = def.title.replace('現場檢查', '')
   return (
     <section className="glass-card my-3 p-5" aria-label={`${shortTitle}現場拍攝`}>
       <div className="flex items-center gap-4">
-        <div aria-hidden className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-full" style={{ background: `conic-gradient(#67e8f9 0 ${deg}deg, rgb(255 255 255 / 0.1) ${deg}deg 360deg)` }}>
-          <div className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-canvas text-[16px] font-medium tabular-nums">{done}/{total}</div>
-        </div>
+        {/* 進度圈：數值變化時平滑轉到新位置 */}
+        <svg width="68" height="68" viewBox="0 0 68 68" className="shrink-0" role="img" aria-label={`進度 ${done} / ${total}`}>
+          <circle cx="34" cy="34" r="28" fill="none" stroke="rgb(255 255 255 / 0.1)" strokeWidth="6" />
+          <circle
+            cx="34" cy="34" r="28" fill="none" stroke="#67e8f9" strokeWidth="6" strokeLinecap="round"
+            strokeDasharray={RING} strokeDashoffset={RING * (1 - done / total)} transform="rotate(-90 34 34)"
+            style={{ transition: 'stroke-dashoffset 500ms cubic-bezier(.2,.8,.2,1)', filter: 'drop-shadow(0 0 6px rgb(103 232 249 / 0.7))', opacity: done ? 1 : 0 }}
+          />
+          <text x="34" y="39" textAnchor="middle" fill="currentColor" fontSize="15" fontWeight="500">{done}/{total}</text>
+        </svg>
         <div className="min-w-0 flex-1">
           <div className="text-[12px] tracking-[0.14em] text-sub">{next ? `${shortTitle}・下一步` : `${shortTitle}・現場拍攝`}</div>
           <div className="mt-0.5 text-[20px]" data-testid={`${def.id}-field-next`}>{next ? next.title : '全部完成'}</div>

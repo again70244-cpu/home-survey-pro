@@ -43,7 +43,7 @@ export function SyncStatusBar({ compact = false, alertsOnly = false }: { compact
     s.phase === 'offline'
       ? ['text-oak', s.pending ? `離線中・${s.pending} 筆等待網路同步` : '離線中・資料保存在本機']
       : s.phase === 'syncing'
-        ? ['text-sub animate-pulse', '雲端同步中…']
+        ? ['text-sub', '雲端同步中…']
         : s.phase === 'error'
           ? ['text-red-700', '同步失敗']
           : s.pending
@@ -52,7 +52,13 @@ export function SyncStatusBar({ compact = false, alertsOnly = false }: { compact
 
   return (
     <button onClick={() => void syncNow()} className={`inline-flex items-center gap-1.5 text-left text-[13px] active:opacity-60 ${dot}`} title="立即同步">
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+      {s.phase === 'syncing' ? (
+        <svg className="hsp-spin shrink-0 text-accent" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
+          <path d="M12 3a9 9 0 1 0 9 9" />
+        </svg>
+      ) : (
+        <span key={s.phase + String(s.pending > 0)} className="hsp-pop-in h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+      )}
       <span>{text}</span>
     </button>
   )
