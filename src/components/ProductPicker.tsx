@@ -17,7 +17,7 @@ export function ProductPicker({ onPick, onClose, selected = [] }: { onPick: (p: 
   const chip = (on: boolean) => `shrink-0 rounded-full px-3.5 py-1.5 text-[13px] ${on ? 'glass-dark' : 'glass text-ink'}`
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#f8f4ee]" role="dialog" aria-label="選擇 LG 產品">
+    <div className="fixed inset-0 z-40 flex flex-col bg-canvas" role="dialog" aria-label="選擇 LG 產品">
       <div className="flex items-center justify-between border-b border-line px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <h2 className="text-xl font-light">選擇 LG 產品</h2>
         <button onClick={onClose} className="glass-dark inline-flex h-11 items-center rounded-full px-5 text-[15px]">完成</button>
@@ -48,9 +48,9 @@ export function ProductPicker({ onPick, onClose, selected = [] }: { onPick: (p: 
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[16px]">{p.model_code}</span>
                       <span className="block truncate text-xs text-sub">{p.display_name || p.category}</span>
-                      <span className={`text-xs ${p.data_quality === 'complete' ? 'text-[#555]' : p.data_quality === 'missing' ? 'text-oak' : 'text-red-700'}`}>{QUALITY_LABEL[p.data_quality]}</span>
+                      <span className={`text-xs ${p.data_quality === 'complete' ? 'text-ink/75' : p.data_quality === 'missing' ? 'text-oak' : 'text-red-700'}`}>{QUALITY_LABEL[p.data_quality]}</span>
                     </span>
-                    <span className={`shrink-0 text-[13px] ${picked ? 'text-[#555]' : 'glass rounded-full px-3 py-1.5 text-ink'}`}>{picked ? '✓ 已選' : '選擇'}</span>
+                    <span className={`shrink-0 text-[13px] ${picked ? 'text-ink/75' : 'glass rounded-full px-3 py-1.5 text-ink'}`}>{picked ? '✓ 已選' : '選擇'}</span>
                   </button>
                 </li>
               )

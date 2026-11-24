@@ -89,7 +89,7 @@ export function SettingsPage() {
           {pwa.canInstall && !pwa.installed && (
             <Button className="mt-3 w-full" onClick={() => void promptInstall()}>安裝到主畫面</Button>
           )}
-          {pwa.installed && <p className="mt-2 text-sm text-[#555]">✓ 已安裝為 App</p>}
+          {pwa.installed && <p className="mt-2 text-sm text-ink/75">✓ 已安裝為 App</p>}
         </Card>
 
         <Card>
@@ -145,7 +145,7 @@ export function SettingsPage() {
 
       {plan && (
         <div className="fixed inset-0 z-40 flex items-end bg-black/30">
-          <div className="w-full rounded-t-[28px] bg-white/95 px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6 backdrop-blur-xl" role="dialog" aria-label="確認還原">
+          <div className="w-full rounded-t-[28px] bg-[#121724]/95 px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6 backdrop-blur-xl" role="dialog" aria-label="確認還原">
             <h3 className="text-2xl font-light text-ink">確認從備份還原</h3>
             <p className="mt-1 text-sm text-sub">備份時間：{new Date(plan.json.exportedAt).toLocaleString('zh-TW')}{plan.json.account?.email ? `・${plan.json.account.email}` : ''}</p>
             <div className="mt-4 grid grid-cols-4 gap-2 text-center">
@@ -159,7 +159,7 @@ export function SettingsPage() {
             </div>
             {plan.otherAccount && <p className="mt-3 border-l-2 border-oak bg-sand p-3 text-sm text-ink">此備份來自其他帳號，還原後資料會屬於目前登入的帳號。</p>}
             {plan.photosWithoutFile > 0 && <p className="mt-3 text-sm text-amber-700">{plan.photosWithoutFile} 張照片在備份中沒有檔案（JSON 備份），將不會還原。</p>}
-            <p className="mt-3 text-sm text-[#555]">{nothingNew ? '備份中的資料都已存在，不需要還原。' : '已存在的資料不會被覆蓋，也不會重複建立。'}</p>
+            <p className="mt-3 text-sm text-ink/75">{nothingNew ? '備份中的資料都已存在，不需要還原。' : '已存在的資料不會被覆蓋，也不會重複建立。'}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={() => setPlan(null)}>取消</Button>
               <Button disabled={!!nothingNew || !!busy} onClick={() => void onRestore()}>確認還原</Button>

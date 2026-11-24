@@ -37,7 +37,7 @@ function SpecEditor({ sp, onClose }: { sp: SurveyProduct; onClose: () => void })
     onClose()
   }
   return (
-    <div className="mt-3 rounded-2xl border border-white/80 bg-white/70 p-3" role="group" aria-label={`修正 ${sp.model_code} 規格`}>
+    <div className="mt-3 rounded-2xl border border-white/[0.12] bg-white/[0.07] p-3" role="group" aria-label={`修正 ${sp.model_code} 規格`}>
       <p className="text-xs text-sub">只影響這筆場勘的檢查與報告；產品知識庫不會改變。空白 = 使用產品知識庫的數值。</p>
       {SPEC_GROUPS.map((g) => (
         <div key={g.title} className="mt-3">
@@ -54,7 +54,7 @@ function SpecEditor({ sp, onClose }: { sp: SurveyProduct; onClose: () => void })
                   onChange={(e) => setVals((v) => ({ ...v, [f]: e.target.value }))}
                   aria-label={`修正 ${SPEC_LABELS[f]}`}
                   data-override={f}
-                  className="w-20 border-0 border-b border-[#d4d4d4] bg-transparent px-0 py-1 text-right text-[16px] tabular-nums focus:border-ink focus:outline-none focus:ring-0"
+                  className="w-20 border-0 border-b border-white/20 bg-transparent px-0 py-1 text-right text-[16px] tabular-nums focus:border-ink focus:outline-none focus:ring-0"
                 />
                 <span className="w-6 text-xs text-sub">cm</span>
               </label>
@@ -64,7 +64,7 @@ function SpecEditor({ sp, onClose }: { sp: SurveyProduct; onClose: () => void })
       ))}
       <label className="mt-3 block">
         <span className="text-xs text-sub">資料來源</span>
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="例如：說明書、現場實測" aria-label="修正資料來源" className="block w-full border-0 border-b border-[#d4d4d4] bg-transparent px-0 py-1.5 text-[15px] focus:border-ink focus:outline-none focus:ring-0" />
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="例如：說明書、現場實測" aria-label="修正資料來源" className="block w-full border-0 border-b border-white/20 bg-transparent px-0 py-1.5 text-[15px] focus:border-ink focus:outline-none focus:ring-0" />
       </label>
       {err && <p className="mt-2 text-sm text-red-700">{err}</p>}
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -95,20 +95,20 @@ function ProductCard({ sp }: { sp: SurveyProduct }) {
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-[17px]">{sp.model_code}</div>
-          <div className="truncate text-[13px] text-[#555]">{sp.display_name || sp.category || ''}</div>
+          <div className="truncate text-[13px] text-ink/75">{sp.display_name || sp.category || ''}</div>
         </div>
         <button onClick={() => confirm(`移除「${sp.model_code}」？`) && void removeSurveyProduct(sp.id)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-red-700" aria-label={`移除產品 ${sp.model_code}`}>
           移除
         </button>
       </div>
       {s.data_quality === 'missing' && !hasBody ? (
-        <p className="mt-2 rounded-2xl bg-white/60 px-3 py-2 text-[13px] text-oak">此產品在試算表中沒有安裝尺寸。可按「修正規格」輸入說明書或實測數值。</p>
+        <p className="mt-2 rounded-2xl bg-white/[0.06] px-3 py-2 text-[13px] text-oak">此產品在試算表中沒有安裝尺寸。可按「修正規格」輸入說明書或實測數值。</p>
       ) : (
         <div className="mt-2 grid grid-cols-3 gap-2 text-center tabular-nums">
           {(['width_cm', 'height_cm', 'depth_cm'] as const).map((f, i) => {
             const x = specValueOf(sp, f)
             return (
-              <div key={f} className={`rounded-2xl py-1.5 ${x.manual ? 'bg-amber-100/80' : 'bg-white/60'}`} data-spec={f} data-manual={x.manual ? 1 : 0}>
+              <div key={f} className={`rounded-2xl py-1.5 ${x.manual ? 'bg-amber-500/15' : 'bg-white/[0.06]'}`} data-spec={f} data-manual={x.manual ? 1 : 0}>
                 <div className="text-[10px] tracking-[0.14em] text-sub">{['寬', '高', '深'][i]}{x.manual && <span className="ml-1 text-oak">手動</span>}</div>
                 <div className={`text-xl font-light ${x.value === null ? 'text-oak' : ''}`}>{dim(x.value)}</div>
               </div>

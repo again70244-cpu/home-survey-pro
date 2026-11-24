@@ -61,6 +61,8 @@ async function device(browser, catalog) {
   const W = p.getByRole('region', { name: '洗衣機現場檢查' })
   await until(async () => (await W.getByTestId('washer-score').count()) === 1)
   await expand(W)
+  const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
+  await expandAreas()
   const dim = async (area, k, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth(k); await i.fill(String(v)); await i.blur() }
   await dim('陽台', 0, 62); await dim('陽台', 1, 80); await dim('陽台', 2, 200)
   const choose = async (f, v) => { await W.locator(`[data-field="${f}"][data-value="${v}"]`).click(); await p.waitForTimeout(150) }

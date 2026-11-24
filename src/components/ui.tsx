@@ -7,7 +7,7 @@ const variants: Record<Variant, string> = {
   primary: 'glass-dark tracking-[0.08em] disabled:opacity-40',
   secondary: 'glass text-ink disabled:opacity-40',
   danger: 'glass text-red-700 disabled:opacity-40',
-  ghost: 'rounded-full text-ink active:bg-black/5',
+  ghost: 'rounded-full text-ink active:bg-white/10',
 }
 
 export function Button({
@@ -43,7 +43,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
     <label className="block">
       <span className="mb-1 block text-xs tracking-[0.12em] text-sub">
         {label}
-        {hint && <span className="ml-1.5 tracking-normal text-[#a3a3a3]">{hint}</span>}
+        {hint && <span className="ml-1.5 tracking-normal text-ink/40">{hint}</span>}
       </span>
       {children}
     </label>
@@ -51,7 +51,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
 }
 
 const inputCls =
-  'block w-full border-0 border-b border-[#d4d4d4] bg-transparent px-0 py-2.5 text-[17px] text-ink focus:border-ink focus:outline-none focus:ring-0'
+  'block w-full border-0 border-b border-white/20 bg-transparent px-0 py-2.5 text-[17px] text-ink focus:border-ink focus:outline-none focus:ring-0'
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputCls} ${props.className ?? ''}`} />
@@ -90,7 +90,7 @@ export function PageTitle({ eyebrow, title, meta }: { eyebrow?: ReactNode; title
     <div className="pb-6 pt-2">
       {eyebrow && <div className="text-xs tracking-[0.2em] text-sub">{eyebrow}</div>}
       <h1 className="mt-2 break-words text-[34px] font-light leading-tight tracking-tight text-ink">{title}</h1>
-      {meta && <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-[#555]">{meta}</div>}
+      {meta && <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink/75">{meta}</div>}
     </div>
   )
 }

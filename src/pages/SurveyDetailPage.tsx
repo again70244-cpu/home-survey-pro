@@ -18,7 +18,7 @@ function Row({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex gap-4 border-b border-line py-3">
       <dt className="w-20 shrink-0 text-[13px] text-sub">{label}</dt>
-      <dd className={`flex-1 whitespace-pre-wrap break-words text-[15px] ${value ? 'text-ink' : 'text-[#b5b5b5]'}`}>{value || '未填寫'}</dd>
+      <dd className={`flex-1 whitespace-pre-wrap break-words text-[15px] ${value ? 'text-ink' : 'text-ink/40'}`}>{value || '未填寫'}</dd>
     </div>
   )
 }

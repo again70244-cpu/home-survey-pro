@@ -12,8 +12,8 @@ import { useToast } from './Toast'
 export const LEVEL_STYLE: Record<RiskLevel, string> = {
   high: 'border-red-700 bg-red-50 text-red-800',
   confirm: 'border-oak bg-sand text-ink',
-  caution: 'border-[#b8860b] bg-[#fdf8ec] text-ink',
-  info: 'border-white/80 bg-white/70 text-[#555]',
+  caution: 'border-amber-400/50 bg-amber-500/10 text-ink',
+  info: 'border-white/[0.12] bg-white/[0.07] text-ink/75',
 }
 
 /** 載入模板檢查需要的資料，並計算結果（報告頁也共用）；id = templateRowId(surveyId, def.id) */
@@ -42,7 +42,7 @@ function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown;
     <fieldset>
       <legend className="mb-1.5 text-[13px] text-ink">{f.label}{f.required && <span className="ml-1 text-oak">*</span>}</legend>
       {f.hint && <p className="-mt-1 mb-1.5 text-xs text-sub">{f.hint}</p>}
-      <div className="flex flex-wrap gap-1 rounded-[22px] bg-black/[0.06] p-1" role="radiogroup" aria-label={f.label}>
+      <div className="flex flex-wrap gap-1 rounded-[22px] bg-white/[0.06] p-1" role="radiogroup" aria-label={f.label}>
         {f.options!.map((o) => {
           const on = value === o.value
           return (
@@ -54,7 +54,7 @@ function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown;
               data-field={f.key}
               data-value={o.value}
               onClick={() => onChange(on ? null : o.value)}
-              className={`h-10 min-w-16 flex-1 rounded-full px-3 text-sm ${on ? 'glass-dark' : 'text-ink active:bg-black/5'}`}
+              className={`h-10 min-w-16 flex-1 rounded-full px-3 text-sm ${on ? 'glass-dark' : 'text-ink active:bg-white/10'}`}
             >
               {o.label}
             </button>
@@ -95,7 +95,7 @@ function InputField({ f, value, onSave }: { f: TemplateField; value: unknown; on
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        className="block w-full border-0 border-b border-[#d4d4d4] bg-transparent px-0 py-2 text-[17px] tabular-nums focus:border-ink focus:outline-none focus:ring-0"
+        className="block w-full border-0 border-b border-white/20 bg-transparent px-0 py-2 text-[17px] tabular-nums focus:border-ink focus:outline-none focus:ring-0"
       />
     </label>
   )
@@ -106,7 +106,7 @@ export function FindingItem({ f }: { f: Finding }) {
     <li className={`border-l-2 px-3 py-2.5 ${LEVEL_STYLE[f.level]}`} data-level={f.level} data-finding={f.id}>
       <div className="text-[11px] tracking-[0.12em]">{RISK_LABEL[f.level]}</div>
       <div className="mt-0.5 text-[15px] font-medium text-ink">{f.title}</div>
-      <div className="mt-1 text-[13px] text-[#444]">{f.why}</div>
+      <div className="mt-1 text-[13px] text-ink/80">{f.why}</div>
       <div className="mt-1 text-[12px] text-sub">依據：{f.basis}</div>
       <div className="mt-1 text-[13px] text-ink">建議：{f.suggestion}</div>
     </li>
@@ -118,7 +118,7 @@ export function ResultSummary({ r }: { r: CheckResult }) {
   return (
     <div className="grid grid-cols-4 gap-1.5 text-center" aria-label="檢查結果統計">
       {levels.map((l) => (
-        <div key={l} className={`rounded-2xl py-2 ${r.counts[l] && l === 'high' ? 'bg-red-100/70' : 'bg-white/60'}`}>
+        <div key={l} className={`rounded-2xl py-2 ${r.counts[l] && l === 'high' ? 'bg-red-100/70' : 'bg-white/[0.06]'}`}>
           <div className={`text-xl font-light tabular-nums ${r.counts[l] && l === 'high' ? 'text-red-700' : ''}`} data-count={l}>{r.counts[l]}</div>
           <div className="text-[10px] tracking-[0.08em] text-sub">{RISK_LABEL[l]}</div>
         </div>
@@ -274,7 +274,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
             const done = data.shotsTaken.has(s.key)
             return (
               <li key={s.key} className="flex items-center gap-3 py-2" data-shot={s.key} data-done={done ? 1 : 0}>
-                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${done ? 'bg-ink text-white' : 'border-[1.5px] border-dashed border-black/30 text-transparent'}`} aria-hidden>✓</span>
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${done ? 'bg-ink text-canvas' : 'border-[1.5px] border-dashed border-white/30 text-transparent'}`} aria-hidden>✓</span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[15px]">{s.label}</div>
                   <div className="truncate text-xs text-sub">{s.hint}</div>

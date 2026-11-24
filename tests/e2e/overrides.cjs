@@ -88,6 +88,8 @@ async function device(browser, catalog) {
   check(await until(async () => (await F.locator(`[data-finding="manual:${AC}"][data-level="info"]`).count()) === 1), '檢查結果標示「部分規格為手動修正」（一般提醒）')
 
   console.log('— 修正值會改變檢查結果（洗衣機寬度）')
+  const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
+  await expandAreas()
   const dim = async (area, k, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth(k); await i.fill(String(v)); await i.blur() }
   await dim('陽台', 0, 66); await dim('陽台', 1, 80); await dim('陽台', 2, 200)
   check(await until(async () => (await W.locator('[data-finding="install:width"]').count()) === 0), '寬 66 ≥ 機身 60 + 4 → 不提醒')

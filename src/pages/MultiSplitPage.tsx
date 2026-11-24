@@ -18,7 +18,7 @@ export function MultiSplitPage() {
           <section key={s.id} className="glass-card my-3 p-5" aria-label={`室外機 ${s.model_code}`}>
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-2xl font-light">{s.model_code}</h2>
-              <span className="text-sm text-[#555]">{s.capacity_kw ? `${s.capacity_kw} KW` : ''}</span>
+              <span className="text-sm text-ink/75">{s.capacity_kw ? `${s.capacity_kw} KW` : ''}</span>
             </div>
             <div className="mt-1 text-[13px] text-sub">{s.indoor_counts.map((n) => `一對${CN[n] ?? n}`).join('、') || '未標示搭配方式'}</div>
 
@@ -27,7 +27,7 @@ export function MultiSplitPage() {
               {s.indoor_units.map((u) => (
                 <li key={u.position} className="flex justify-between border-b border-line py-2 text-[15px]">
                   <span>{u.model_code}</span>
-                  <span className="text-[#555]">{[u.series, u.capacity_kw ? `${u.capacity_kw}KW` : ''].filter(Boolean).join(' ')}</span>
+                  <span className="text-ink/75">{[u.series, u.capacity_kw ? `${u.capacity_kw}KW` : ''].filter(Boolean).join(' ')}</span>
                 </li>
               ))}
             </ul>

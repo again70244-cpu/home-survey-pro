@@ -48,7 +48,7 @@ export function SyncStatusBar({ compact = false, alertsOnly = false }: { compact
           ? ['text-red-700', '同步失敗']
           : s.pending
             ? ['text-oak', `本機已保存・${s.pending} 筆尚未同步`]
-            : ['text-[#555]', `雲端已同步${s.lastSyncedAt ? `・${ago(s.lastSyncedAt)}` : ''}`]
+            : ['text-ink/75', `雲端已同步${s.lastSyncedAt ? `・${ago(s.lastSyncedAt)}` : ''}`]
 
   return (
     <button onClick={() => void syncNow()} className={`inline-flex items-center gap-1.5 text-left text-[13px] active:opacity-60 ${dot}`} title="立即同步">

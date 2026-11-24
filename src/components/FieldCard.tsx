@@ -24,13 +24,13 @@ function FieldCard({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
   return (
     <section className="glass-card my-3 p-5" aria-label={`${shortTitle}現場拍攝`}>
       <div className="flex items-center gap-4">
-        <div aria-hidden className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-full" style={{ background: `conic-gradient(#111 0 ${deg}deg, rgb(17 17 17 / 0.1) ${deg}deg 360deg)` }}>
-          <div className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#fbf9f5] text-[16px] font-medium tabular-nums">{done}/{total}</div>
+        <div aria-hidden className="flex h-[68px] w-[68px] shrink-0 items-center justify-center rounded-full" style={{ background: `conic-gradient(#67e8f9 0 ${deg}deg, rgb(255 255 255 / 0.1) ${deg}deg 360deg)` }}>
+          <div className="flex h-[54px] w-[54px] items-center justify-center rounded-full bg-canvas text-[16px] font-medium tabular-nums">{done}/{total}</div>
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[12px] tracking-[0.14em] text-sub">{next ? `${shortTitle}・下一步` : `${shortTitle}・現場拍攝`}</div>
           <div className="mt-0.5 text-[20px]" data-testid={`${def.id}-field-next`}>{next ? next.title : '全部完成'}</div>
-          <div className="mt-0.5 truncate text-[13px] text-[#555]">{next ? next.hint : noPhoto ? `還有 ${noPhoto} 步沒拍照` : '量測與照片都完成了'}</div>
+          <div className="mt-0.5 truncate text-[13px] text-ink/75">{next ? next.hint : noPhoto ? `還有 ${noPhoto} 步沒拍照` : '量測與照片都完成了'}</div>
         </div>
       </div>
       <button

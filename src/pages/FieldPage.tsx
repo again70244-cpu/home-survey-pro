@@ -66,7 +66,7 @@ function DimInput({ area, k, autoFocus }: { area: SurveyArea; k: DimKey; autoFoc
   }
   const filled = text.trim() !== ''
   return (
-    <label className={`block rounded-[18px] border-2 px-3 py-2.5 ${filled ? 'border-ink/80 bg-white/85' : 'border-transparent bg-white/55'}`}>
+    <label className={`block rounded-[18px] border-2 px-3 py-2.5 ${filled ? 'border-ink/80 bg-white/[0.09]' : 'border-transparent bg-white/[0.05]'}`}>
       <span className="flex items-baseline justify-between text-[13px] text-sub">
         <span>{DIM_LABEL[k]}</span>
         {err && <span className="text-red-700">{err}</span>}
@@ -84,7 +84,7 @@ function DimInput({ area, k, autoFocus }: { area: SurveyArea; k: DimKey; autoFoc
         onChange={(e) => setText(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        className="mt-0.5 w-full min-w-0 border-0 bg-transparent p-0 text-[32px] font-light tabular-nums text-ink placeholder:text-[#c9c9c9] focus:outline-none focus:ring-0"
+        className="mt-0.5 w-full min-w-0 border-0 bg-transparent p-0 text-[32px] font-light tabular-nums text-ink placeholder:text-ink/30 focus:outline-none focus:ring-0"
       />
     </label>
   )
@@ -135,7 +135,7 @@ function BigField({ f, value, onSave }: { f: TemplateField; value: unknown; onSa
     <label className="block">
       <span className="mb-2.5 block text-[18px] text-ink">{f.label}{f.required && <span className="ml-1 text-oak">*</span>}</span>
       {f.hint && <span className="-mt-1.5 mb-2.5 block text-[13px] text-sub">{f.hint}</span>}
-      <span className={`flex items-baseline gap-2 rounded-[18px] border-2 px-4 py-2.5 ${text ? 'border-ink/80 bg-white/85' : 'border-transparent bg-white/55'}`}>
+      <span className={`flex items-baseline gap-2 rounded-[18px] border-2 px-4 py-2.5 ${text ? 'border-ink/80 bg-white/[0.09]' : 'border-transparent bg-white/[0.05]'}`}>
         <input
           data-field={f.key}
           inputMode={f.type === 'cm' ? 'decimal' : undefined}
@@ -146,7 +146,7 @@ function BigField({ f, value, onSave }: { f: TemplateField; value: unknown; onSa
           onChange={(e) => setText(e.target.value)}
           onBlur={commit}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          className={`min-w-0 flex-1 border-0 bg-transparent p-0 text-ink placeholder:text-[#c9c9c9] focus:outline-none focus:ring-0 ${f.type === 'cm' ? 'text-[32px] font-light tabular-nums' : 'text-[17px]'}`}
+          className={`min-w-0 flex-1 border-0 bg-transparent p-0 text-ink placeholder:text-ink/30 focus:outline-none focus:ring-0 ${f.type === 'cm' ? 'text-[32px] font-light tabular-nums' : 'text-[17px]'}`}
         />
         {f.type === 'cm' && <span className="text-[15px] text-sub">公分</span>}
       </span>
@@ -159,7 +159,7 @@ function Thumb({ p }: { p: SurveyPhoto }) {
   return (
     <span className="relative block h-[72px] w-[72px] shrink-0 overflow-hidden rounded-2xl bg-sand-2">
       {url && <img src={url} alt={p.caption ?? ''} className="h-full w-full object-cover" />}
-      <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] text-white" aria-hidden>✓</span>
+      <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-ink text-[11px] text-canvas" aria-hidden>✓</span>
     </span>
   )
 }
@@ -167,8 +167,8 @@ function Thumb({ p }: { p: SurveyPhoto }) {
 const LEVEL_TONE: Record<Finding['level'], string> = {
   high: 'border-red-700/25 bg-red-50/90',
   confirm: 'border-amber-700/25 bg-sand/90',
-  caution: 'border-[#b8860b]/25 bg-[#fdf8ec]/90',
-  info: 'border-white/80 bg-white/70',
+  caution: 'border-amber-400/40 bg-amber-500/10',
+  info: 'border-white/[0.12] bg-white/[0.07]',
 }
 
 export function FieldPage() {
@@ -245,7 +245,7 @@ export function FieldPage() {
             data-step-state={i === idx ? 'current' : statuses[i]?.done ? 'done' : 'todo'}
             className="flex h-5 items-center"
           >
-            <span className={`block h-1 w-full rounded-full ${statuses[i]?.done ? 'bg-ink' : i === idx ? 'bg-ink/45' : 'bg-black/[0.12]'}`} />
+            <span className={`block h-1 w-full rounded-full ${statuses[i]?.done ? 'bg-accent shadow-[0_0_8px_rgb(103_232_249/0.6)]' : i === idx ? 'bg-ink/60' : 'bg-white/[0.12]'}`} />
           </button>
         ))}
       </div>
@@ -267,19 +267,19 @@ export function FieldPage() {
         </header>
         <main className="mx-auto max-w-2xl space-y-3 px-4">
           <div className="px-1.5 py-2 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ink text-white" aria-hidden>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-canvas shadow-[0_0_30px_rgb(103_232_249/0.45)]" aria-hidden>
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg>
             </div>
             <h1 className="mt-3.5 text-[28px] font-normal" data-testid="field-done-title">現場拍攝完成 {doneCount} / {steps.length}</h1>
-            <p className="mt-1.5 text-[15px] text-[#555]">
+            <p className="mt-1.5 text-[15px] text-ink/75">
               {notDone.length ? `還有 ${notDone.length} 步未完成，離開前建議補上` : noPhoto.length ? `還有 ${noPhoto.length} 步沒拍照` : '全部完成'}
             </p>
           </div>
           {notDone.length > 0 && (
             <section className="glass-card px-4 py-1.5" aria-label="未完成的步驟">
               {notDone.map(({ s, i }) => (
-                <div key={s.key} className="flex items-center gap-3 border-b border-black/[0.07] py-3 last:border-0">
-                  <span className="h-7 w-7 shrink-0 rounded-full border-[1.5px] border-dashed border-black/35" aria-hidden />
+                <div key={s.key} className="flex items-center gap-3 border-b border-white/[0.08] py-3 last:border-0">
+                  <span className="h-7 w-7 shrink-0 rounded-full border-[1.5px] border-dashed border-white/30" aria-hidden />
                   <div className="min-w-0 flex-1">
                     <div className="text-[16px]">{s.title}</div>
                     <div className="truncate text-[12px] text-sub">{s.hint}</div>
@@ -292,8 +292,8 @@ export function FieldPage() {
           {noPhoto.length > 0 && (
             <section className="glass-card px-4 py-1.5" aria-label="還沒拍照的步驟">
               {noPhoto.map(({ s, i, st }) => (
-                <div key={s.key} className="flex items-center gap-3 border-b border-black/[0.07] py-3 last:border-0">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-sub" aria-hidden>{Icon.camera}</span>
+                <div key={s.key} className="flex items-center gap-3 border-b border-white/[0.08] py-3 last:border-0">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-sub" aria-hidden>{Icon.camera}</span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[16px]">{s.title}</div>
                     <div className="text-[12px] text-sub">已量測・照片 {st.shotsDone} / {st.shotsTotal}</div>
@@ -311,7 +311,7 @@ export function FieldPage() {
                   <li key={f.id} className={`rounded-2xl border px-3.5 py-2.5 ${LEVEL_TONE[f.level]}`} data-finding={f.id} data-level={f.level}>
                     <div className="text-[11px] tracking-[0.12em] text-sub">{RISK_LABEL[f.level]}</div>
                     <div className="text-[16px]">{f.title}</div>
-                    <div className="text-[13px] text-[#555]">{f.suggestion}</div>
+                    <div className="text-[13px] text-ink/75">{f.suggestion}</div>
                   </li>
                 ))}
               </ul>
@@ -373,19 +373,19 @@ export function FieldPage() {
       <main className="mx-auto max-w-2xl space-y-3.5 px-4" aria-label={`步驟 ${step.title}`}>
         <div className="px-1.5 pt-1">
           <h1 className="text-[30px] font-normal leading-tight">{step.title}</h1>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-[#555]">{step.hint}</p>
+          <p className="mt-1.5 text-[15px] leading-relaxed text-ink/75">{step.hint}</p>
         </div>
 
         {hasInputs && (
           <section className="glass-card space-y-5 p-4" aria-label="量測與問題">
             <div className="flex items-center gap-2 text-[13px] text-sub">
-              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] text-white">1</span>
+              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] text-canvas">1</span>
               {step.dims ? '量尺寸（公分）' : '回答問題'}
             </div>
             {step.dims && (
               <div>
                 {step.dims.target === 'passage' && (
-                  <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-black/[0.06] p-1" role="radiogroup" aria-label="電梯或樓梯">
+                  <div className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-white/[0.06] p-1" role="radiogroup" aria-label="電梯或樓梯">
                     {(['elevator', 'stairs'] as const).map((k) => (
                       <button key={k} type="button" role="radio" aria-checked={passageKind === k} onClick={() => setPassage(k)} className={`h-10 rounded-full text-[15px] ${passageKind === k ? 'glass-dark' : 'text-ink'}`}>
                         {k === 'elevator' ? '電梯' : '樓梯'}
@@ -416,12 +416,12 @@ export function FieldPage() {
                   <li key={f.id} className={`rounded-2xl border px-3.5 py-2.5 ${LEVEL_TONE[f.level]}`} data-finding={f.id} data-level={f.level}>
                     <div className="text-[11px] tracking-[0.12em] text-sub">{RISK_LABEL[f.level]}</div>
                     <div className="text-[15px]">{f.title}</div>
-                    <div className="text-[13px] text-[#555]">{f.why}</div>
+                    <div className="text-[13px] text-ink/75">{f.why}</div>
                   </li>
                 ))}
               </ul>
             ) : (
-              st.done && <p className="text-[14px] text-[#555]" data-testid="step-ok">✓ 這一步沒有發現問題</p>
+              st.done && <p className="text-[14px] text-ink/75" data-testid="step-ok">✓ 這一步沒有發現問題</p>
             )}
           </section>
         )}
@@ -429,7 +429,7 @@ export function FieldPage() {
         {shots.length > 0 && (
           <section className="glass-card space-y-3 p-4" aria-label="拍照">
             <div className="flex items-center gap-2 text-[13px] text-sub">
-              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] text-white">{hasInputs ? 2 : 1}</span>
+              <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-ink text-[12px] text-canvas">{hasInputs ? 2 : 1}</span>
               拍照
             </div>
             {shots.map((s) => {
@@ -437,7 +437,7 @@ export function FieldPage() {
               return (
                 <div key={s.key} className="flex items-center gap-3" data-shot={s.key} data-done={ps.length ? 1 : 0}>
                   {ps.length ? <Thumb p={ps[ps.length - 1]} /> : (
-                    <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-black/20 text-sub" aria-hidden>{Icon.camera}</span>
+                    <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-white/20 text-sub" aria-hidden>{Icon.camera}</span>
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="text-[16px]">{s.label}</div>

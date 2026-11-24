@@ -35,7 +35,7 @@ export function SpecTable({ p }: { p: Pick<CatalogProduct, 'install_extra'> & Pa
                   const c = conds.filter((x) => x.field === f)
                   return (
                     <div key={f} className="flex justify-between gap-4 border-b border-line py-2.5 text-[15px]">
-                      <dt className="text-[#555]">{SPEC_LABELS[f]}</dt>
+                      <dt className="text-ink/75">{SPEC_LABELS[f]}</dt>
                       <dd className="text-right tabular-nums">
                         {v} cm
                         {c.map((x) => <div key={x.condition} className="text-xs text-sub">（{x.condition}）</div>)}
@@ -86,7 +86,7 @@ export function CatalogProductPage() {
           meta={<span className={p.data_quality === 'complete' ? '' : p.data_quality === 'missing' ? 'text-oak' : 'text-red-700'}>{QUALITY_LABEL[p.data_quality]}</span>}
         />
         {!p.is_active && <p className="mb-4 border-l-2 border-red-700 bg-red-50 px-3 py-2 text-sm text-red-800">此產品已不在 Google Sheets 中（停用於 {fmtTime(p.deactivated_at)}），僅供查閱歷史資料。</p>}
-        {p.display_name && <p className="-mt-3 mb-5 text-[15px] text-[#555]">{p.display_name}</p>}
+        {p.display_name && <p className="-mt-3 mb-5 text-[15px] text-ink/75">{p.display_name}</p>}
 
         {p.image_urls.length > 0 && (
           <div className="-mx-6 mb-6 flex snap-x gap-2 overflow-x-auto px-6" aria-label="產品圖片">

@@ -33,7 +33,7 @@ export function usePhotoUrl(photoId: string | undefined) {
 
 function PhotoStatus({ p }: { p: SurveyPhoto }) {
   const { phase } = useSyncState()
-  const tag = (cls: string, t: string) => <span className={`block px-1.5 py-0.5 text-[11px] text-white ${cls}`}>{t}</span>
+  const tag = (cls: string, t: string) => <span className={`block rounded-tr-xl px-2 py-0.5 text-[11px] font-medium text-canvas ${cls}`}>{t}</span>
   if (p._syncError) return tag('bg-red-700', '上傳失敗')
   if (p._blobState === 'pending') return tag('bg-oak', phase === 'offline' ? '等待網路上傳' : phase === 'syncing' ? '上傳中…' : '待上傳')
   if (p._dirty) return tag('bg-oak', '尚未同步')
@@ -61,7 +61,7 @@ function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number;
           <span className="flex h-full items-center justify-center text-xs text-sub">{missing ? '離線中，照片尚未下載' : '載入中…'}</span>
         )}
         <span className="absolute bottom-0 left-0"><PhotoStatus p={p} /></span>
-        <span className="absolute right-0 top-0 bg-ink px-2 py-0.5 text-[11px] tabular-nums text-white">{String(index + 1).padStart(2, '0')}</span>
+        <span className="absolute right-0 top-0 bg-ink px-2 py-0.5 text-[11px] tabular-nums text-canvas">{String(index + 1).padStart(2, '0')}</span>
       </button>
       <div className="pt-1">
         <input
@@ -76,8 +76,8 @@ function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number;
         />
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
-            <button type="button" disabled={index === 0} onClick={() => void movePhoto(p.area_id, p.id, -1)} className="h-9 w-9 text-ink disabled:text-[#c9c9c9] active:bg-sand" aria-label={`照片 ${index + 1} 往前`}>←</button>
-            <button type="button" disabled={index === total - 1} onClick={() => void movePhoto(p.area_id, p.id, 1)} className="h-9 w-9 text-ink disabled:text-[#c9c9c9] active:bg-sand" aria-label={`照片 ${index + 1} 往後`}>→</button>
+            <button type="button" disabled={index === 0} onClick={() => void movePhoto(p.area_id, p.id, -1)} className="h-9 w-9 text-ink disabled:text-ink/40 active:bg-sand" aria-label={`照片 ${index + 1} 往前`}>←</button>
+            <button type="button" disabled={index === total - 1} onClick={() => void movePhoto(p.area_id, p.id, 1)} className="h-9 w-9 text-ink disabled:text-ink/40 active:bg-sand" aria-label={`照片 ${index + 1} 往後`}>→</button>
           </div>
           <button
             type="button"

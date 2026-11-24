@@ -67,6 +67,8 @@ async function device(browser, catalog) {
   check((await W.locator('#washer-install-area').inputValue()) !== '', '預設安裝位置為陽台')
 
   console.log('— 填寫現場尺寸與條件')
+  const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
+  await expandAreas()
   const dim = async (area, label, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth({ 寬: 0, 深: 1, 高: 2 }[label]); await i.fill(String(v)); await i.blur() }
   await dim('陽台', '寬', 62); await dim('陽台', '深', 80); await dim('陽台', '高', 200)
   await dim('電梯', '寬', 63); await dim('電梯', '深', 60)

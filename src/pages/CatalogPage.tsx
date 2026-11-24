@@ -8,7 +8,7 @@ import type { CatalogProduct } from '../catalog/types'
 import { Icon, IconButton, PageTitle, TextButton, TextInput, TopBar } from '../components/ui'
 
 function QualityTag({ q }: { q: CatalogProduct['data_quality'] }) {
-  const cls = q === 'complete' ? 'text-[#555]' : q === 'missing' ? 'text-oak' : 'text-red-700'
+  const cls = q === 'complete' ? 'text-ink/75' : q === 'missing' ? 'text-oak' : 'text-red-700'
   return <span className={`text-xs ${cls}`}>{q === 'complete' ? '✓ ' : ''}{QUALITY_LABEL[q]}</span>
 }
 
@@ -122,13 +122,13 @@ export function CatalogPage() {
                     <ProductImage url={p.image_urls[0]} className="h-16 w-16 shrink-0 border border-line" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[17px] text-ink">{p.model_code}</div>
-                      <div className="mt-0.5 truncate text-[13px] text-[#555]">{p.display_name || p.category || '—'}</div>
+                      <div className="mt-0.5 truncate text-[13px] text-ink/75">{p.display_name || p.category || '—'}</div>
                       <div className="mt-1 flex gap-3">
                         <QualityTag q={p.data_quality} />
                         {p.category && <span className="text-xs text-sub">{p.category}</span>}
                       </div>
                     </div>
-                    <span className="text-[#c4c4c4]">{Icon.chevron}</span>
+                    <span className="text-ink/40">{Icon.chevron}</span>
                   </Link>
                 </li>
               ))}

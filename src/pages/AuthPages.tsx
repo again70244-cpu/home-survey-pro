@@ -191,7 +191,7 @@ export function ResetPasswordPage() {
 export function SetupNeededPage() {
   return (
     <AuthLayout title="尚未設定雲端服務">
-      <div className="space-y-3 text-sm text-[#555]">
+      <div className="space-y-3 text-sm text-ink/75">
         <p>這個版本還沒有填入 Supabase 連線資訊，所以無法登入。</p>
         <p>
           請在專案根目錄建立 <code className="bg-sand px-1">.env.local</code>，填入

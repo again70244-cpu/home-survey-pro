@@ -60,7 +60,7 @@ export function HomePage() {
         />
         <div className="relative">
           <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-sub">{Icon.search}</span>
-          <TextInput type="search" placeholder="搜尋姓名、電話、地址、型號" value={q} onChange={(e) => setQ(e.target.value)} className="glass !h-12 rounded-full !border !border-white/80 !py-0 !pl-11 !pr-4" />
+          <TextInput type="search" placeholder="搜尋姓名、電話、地址、型號" value={q} onChange={(e) => setQ(e.target.value)} className="glass !h-12 rounded-full !border !border-white/[0.12] !py-0 !pl-11 !pr-4" />
         </div>
         <div className="mt-2"><SyncStatusBar alertsOnly /></div>
 
@@ -87,7 +87,7 @@ export function HomePage() {
                       <span className="truncate text-xl font-normal text-ink">{s.customer_name || '（未填姓名）'}</span>
                       <span className="shrink-0 text-xs tracking-wider text-sub">{formatDate(s.survey_date)}</span>
                     </div>
-                    <div className="mt-1.5 flex items-center gap-4 text-[13px] text-[#555]">
+                    <div className="mt-1.5 flex items-center gap-4 text-[13px] text-ink/75">
                       <span className="shrink-0">{s.product_model || '未填型號'}</span>
                       {s.customer_address && <span className="truncate text-sub">{s.customer_address}</span>}
                     </div>
@@ -97,7 +97,7 @@ export function HomePage() {
                       </div>
                     )}
                   </div>
-                  <span className="text-[#c4c4c4]">{Icon.chevron}</span>
+                  <span className="text-ink/40">{Icon.chevron}</span>
                 </Link>
               </li>
             ))}

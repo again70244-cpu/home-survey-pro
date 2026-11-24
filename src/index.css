@@ -1,41 +1,53 @@
 @import "tailwindcss";
 
 /*
- * 白樺（Birch）＋ Liquid Glass
- * 淡暖色底、黑色字、半透明毛玻璃按鈕與卡片、木質米色點綴
+ * 深色科技風 ＋ Liquid Glass
+ * 深藍黑底、淺色字、半透明毛玻璃按鈕與卡片、冰藍與紫色微光
  * 以覆寫色票的方式套用到全部元件：brand → 墨黑、amber → 木質色（待補）、emerald → 深灰（完成）
  */
 @theme {
   --font-sans: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
 
-  --color-ink: #111111;
-  --color-sub: #6e6e6e;
-  --color-line: #ececec;
-  --color-oak: #7a5a36;
-  --color-sand: #faf7f2;
-  --color-sand-2: #efe9df;
+  /* 深色科技風：深藍黑底、淺色字、冰藍點綴 */
+  --color-canvas: #090c13;
+  --color-ink: #eef2f7;
+  --color-sub: #8d98ab;
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-oak: #f2b866;
+  --color-sand: rgb(255 255 255 / 0.06);
+  --color-sand-2: rgb(255 255 255 / 0.1);
+  --color-accent: #67e8f9;
 
-  --color-brand-50: #faf7f2;
-  --color-brand-100: #efe9df;
-  --color-brand-500: #111111;
-  --color-brand-600: #111111;
-  --color-brand-700: #000000;
+  --color-brand-50: rgb(255 255 255 / 0.06);
+  --color-brand-100: rgb(255 255 255 / 0.1);
+  --color-brand-500: #67e8f9;
+  --color-brand-600: #67e8f9;
+  --color-brand-700: #a5f3fc;
 
-  --color-amber-50: #faf7f2;
-  --color-amber-100: #f3ede3;
-  --color-amber-200: #e6ded1;
-  --color-amber-300: #d9cdb9;
-  --color-amber-500: #7a5a36;
-  --color-amber-600: #7a5a36;
-  --color-amber-700: #6a4d2e;
-  --color-amber-800: #5e4529;
+  /* 提醒色調整為深色底上可讀的亮度 */
+  --color-red-50: rgb(255 90 90 / 0.1);
+  --color-red-100: rgb(255 90 90 / 0.16);
+  --color-red-200: rgb(255 90 90 / 0.3);
+  --color-red-600: #ff8a8a;
+  --color-red-700: #ff7b7b;
+  --color-red-800: #ffb4b4;
 
-  --color-emerald-50: #f5f5f5;
-  --color-emerald-200: #dedede;
-  --color-emerald-500: #333333;
-  --color-emerald-600: #333333;
-  --color-emerald-700: #222222;
-  --color-emerald-800: #1a1a1a;
+  --color-amber-50: rgb(242 184 102 / 0.08);
+  --color-amber-100: rgb(242 184 102 / 0.14);
+  --color-amber-200: rgb(242 184 102 / 0.22);
+  --color-amber-300: rgb(242 184 102 / 0.3);
+  --color-amber-400: #f6c27a;
+  --color-amber-500: #f2b866;
+  --color-amber-600: #f2b866;
+  --color-amber-700: #f2b866;
+  --color-amber-800: #f7d19b;
+
+  --color-emerald-50: rgb(255 255 255 / 0.06);
+  --color-emerald-200: rgb(255 255 255 / 0.15);
+  --color-emerald-500: #8ee6c0;
+  --color-emerald-600: #8ee6c0;
+  --color-emerald-700: #a7f0cf;
+  --color-emerald-800: #c4f5de;
 
   /* Liquid Glass：圓角膠囊與卡片 */
   --radius-sm: 6px;
@@ -50,21 +62,22 @@
 }
 
 html, body, #root { min-height: 100%; }
-html { background-color: #f8f4ee; }
+html { background-color: #090c13; color-scheme: dark; }
 body {
   @apply text-ink antialiased;
-  /* 淡暖色底：毛玻璃需要有一點層次才看得出來（純白底上幾乎看不到） */
-  background-color: #f8f4ee;
+  /* 深色底加上冰藍、紫色微光：毛玻璃在深色上透光與反光最明顯 */
+  background-color: #090c13;
   background-image:
-    radial-gradient(520px 420px at -10% 18%, rgb(227 211 187 / 0.55), transparent 70%),
-    radial-gradient(560px 460px at 115% 62%, rgb(217 198 168 / 0.45), transparent 70%),
-    linear-gradient(170deg, #f7f2ea 0%, #fbf9f5 45%, #efe6d8 100%);
+    radial-gradient(560px 460px at -12% 12%, rgb(56 189 248 / 0.16), transparent 70%),
+    radial-gradient(620px 520px at 115% 55%, rgb(139 92 246 / 0.15), transparent 70%),
+    radial-gradient(520px 420px at 30% 110%, rgb(45 212 191 / 0.08), transparent 70%),
+    linear-gradient(170deg, #0b1020 0%, #090c13 55%, #0c0a18 100%);
   background-attachment: fixed;
   -webkit-tap-highlight-color: transparent;
   font-feature-settings: "tnum" 1;
 }
 input, textarea, select { font-size: 16px; } /* 避免 iOS 聚焦時自動放大 */
-::placeholder { color: #b5b5b5; }
+::placeholder { color: #5d6779; }
 
 /* ---------------------------------------------------------------------------
  * Liquid Glass
@@ -74,38 +87,37 @@ input, textarea, select { font-size: 16px; } /* 避免 iOS 聚焦時自動放大
  * 不支援模糊（backdrop-filter）或使用者要求降低透明度時，自動改成不透明，文字一樣清楚
  * ------------------------------------------------------------------------- */
 @utility glass {
-  background: rgb(255 255 255 / 0.58);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgb(255 255 255 / 0.8);
-  box-shadow: 0 6px 20px rgb(70 50 25 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 -1px 0 rgb(70 50 25 / 0.06);
-}
-@utility glass-dark {
-  background: rgb(22 20 18 / 0.84);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgb(255 255 255 / 0.18);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.28);
-  color: #fff;
-}
-@utility glass-card {
-  background: rgb(255 255 255 / 0.5);
+  background: rgb(255 255 255 / 0.07);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid rgb(255 255 255 / 0.7);
-  box-shadow: 0 8px 30px rgb(70 50 25 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 -1px 0 rgb(0 0 0 / 0.2);
+}
+/* 主要按鈕：發光的亮面玻璃（深色文字） */
+@utility glass-dark {
+  background: linear-gradient(180deg, rgb(244 251 255 / 0.97), rgb(205 232 255 / 0.9));
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgb(255 255 255 / 0.6);
+  box-shadow: 0 0 0 1px rgb(103 232 249 / 0.22), 0 10px 30px rgb(103 232 249 / 0.2), inset 0 1px 0 #fff;
+  color: #081018;
+}
+@utility glass-card {
+  background: rgb(255 255 255 / 0.045);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.1);
   border-radius: 24px;
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass { background: rgb(255 255 255 / 0.94); }
-  .glass-card { background: rgb(255 255 255 / 0.9); }
-  .glass-dark { background: #161412; }
+  .glass { background: #1c2230; }
+  .glass-card { background: #151a25; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .glass, .glass-card, .glass-dark { -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .glass { background: #fff; }
-  .glass-card { background: rgb(255 255 255 / 0.95); }
-  .glass-dark { background: #161412; }
+  .glass { background: #1c2230; }
+  .glass-card { background: #151a25; }
 }
 /* 按下時的回饋 */
 .glass:active, .glass-dark:active { transform: scale(0.98); }

@@ -186,7 +186,7 @@ export function ReportPage() {
                 setFiles([]); setPreviews([]); setPages(null); setBlocks([]); setData(null); setStage({ step: 'loading' })
                 setParams(v === 'installer' ? {} : { v }, { replace: true })
               }}
-              className={`h-11 rounded-full text-[15px] disabled:opacity-50 ${variant === v ? 'glass-dark' : 'text-ink active:bg-black/5'}`}
+              className={`h-11 rounded-full text-[15px] disabled:opacity-50 ${variant === v ? 'glass-dark' : 'text-ink active:bg-white/10'}`}
             >
               {VARIANT_LABEL[v]}
               <span className="ml-1.5 text-xs opacity-70">{v === 'installer' ? '給安裝人員' : '給客戶'}</span>
@@ -206,12 +206,12 @@ export function ReportPage() {
         {missingPhotos > 0 && <ErrorBox>有 {missingPhotos} 張照片目前無法取得（離線且尚未下載到這台裝置），報告中會以文字標示。</ErrorBox>}
         {stage.step === 'done' && (
           <>
-            <p className="text-sm text-[#555]">
+            <p className="text-sm text-ink/75">
               已產生 <b>{files.length}</b> 張報告圖片（A4 直式，{PAGE_W * 2}×{PAGE_H * 2}）。
             </p>
             <ul className="space-y-3">
               {previews.map((u, i) => (
-                <li key={u} className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgb(70_50_25/0.12)]">
+                <li key={u} className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgb(0_0_0/0.45)]">
                   <img src={u} alt={`第 ${i + 1} 頁`} className="w-full" />
                 </li>
               ))}
@@ -229,7 +229,7 @@ export function ReportPage() {
                 <Button variant="secondary" className="h-14" onClick={() => void onShare()}>分享全部 {files.length} 張</Button>
               </div>
             ) : (
-              <p className="rounded-2xl bg-white/70 px-3 py-2 text-sm text-ink">
+              <p className="rounded-2xl bg-white/[0.07] px-3 py-2 text-sm text-ink">
                 這個瀏覽器無法一次分享多張圖片。請「下載全部」或「下載 ZIP」後，到 LINE 選擇相簿中的圖片傳送。建議使用 Android Chrome。
               </p>
             )}

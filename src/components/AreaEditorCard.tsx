@@ -123,9 +123,9 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
             />
           ) : (
             <h3 className="truncate text-xl font-normal text-ink">
-              <span className="mr-2.5 align-middle text-xs tabular-nums text-[#9a9a9a]">{String(index + 1).padStart(2, '0')}</span>
+              <span className="mr-2.5 align-middle text-xs tabular-nums text-ink/40">{String(index + 1).padStart(2, '0')}</span>
               {a.name}
-              <span className="ml-2 align-middle text-xs text-[#9a9a9a]">{AREA_KIND_LABEL[a.kind]}</span>
+              <span className="ml-2 align-middle text-xs text-ink/40">{AREA_KIND_LABEL[a.kind]}</span>
             </h3>
           )}
           <div className="mt-1.5"><AreaChips s={s} /></div>
@@ -153,7 +153,7 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
               return (
                 <label
                   key={d.key}
-                  className={`block rounded-2xl border px-3 py-2.5 focus-within:border-ink/40 ${empty ? 'border-white/60 bg-white/40' : 'border-white/90 bg-white/75'}`}
+                  className={`block rounded-2xl border px-3 py-2.5 focus-within:border-ink/40 ${empty ? 'border-white/[0.12] bg-white/[0.04]' : 'border-white/[0.12] bg-white/[0.08]'}`}
                 >
                   <span className="flex items-baseline justify-between text-[10px] tracking-[0.14em] text-sub">
                     <span>{d.label} {DIM_EN[d.key]}</span>
@@ -174,7 +174,7 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
                       if (r.ok) setText((x) => ({ ...x, [d.key]: toText(r.value) })) // 全形數字等整理成標準格式
                       inputEvents.onBlur()
                     }}
-                    className="mt-0.5 w-full min-w-0 border-0 bg-transparent p-0 text-[30px] font-light tabular-nums text-ink placeholder:text-[#c9c9c9] focus:outline-none focus:ring-0"
+                    className="mt-0.5 w-full min-w-0 border-0 bg-transparent p-0 text-[30px] font-light tabular-nums text-ink placeholder:text-ink/30 focus:outline-none focus:ring-0"
                     aria-label={`${a.name} ${d.label}（公分）`}
                   />
                 </label>
@@ -203,7 +203,7 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
               aria-label={`${a.name} 區域備註`}
             />
           </label>
-          <div className="mt-1 h-4 text-right text-[11px] text-[#9a9a9a]">
+          <div className="mt-1 h-4 text-right text-[11px] text-ink/40">
             {saved === 'pending' ? '儲存中…' : saved === 'saved' ? '已儲存到本機' : saved === 'error' ? <span className="text-red-700">儲存失敗，請重試</span> : ''}
           </div>
         </>

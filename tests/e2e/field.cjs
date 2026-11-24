@@ -131,6 +131,14 @@ async function device(browser, catalog) {
   await p.getByRole('heading', { name, exact: true }).waitFor()
   check(await until(async () => (await card.getByTestId('washer-field-next').innerText().catch(() => '')) === '全部完成'), '場勘頁卡片顯示全部完成')
   check((await card.getByRole('button').innerText()).includes('檢視現場拍攝'), '按鈕改為「檢視現場拍攝」')
+  const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
+  check(await p.getByRole('region', { name: '區域 陽台' }).count() === 0, '有現場拍攝時，區域預設只顯示一行摘要')
+  const summary = await p.getByRole('list', { name: '場勘區域清單' }).innerText()
+  check(/陽台\s*62 × 80 × 200 cm・照片 3 張/.test(summary), '摘要顯示尺寸與照片數：' + summary.replace(/\n/g, ' | '))
+  await p.getByRole('button', { name: '編輯區域 陽台' }).click()
+  check(await until(async () => (await p.getByRole('region', { name: '區域 陽台' }).count()) === 1), '點一下就展開該區域的完整編輯')
+  await p.getByRole('button', { name: '收起區域 陽台' }).click()
+  await expandAreas()
   const balc = p.getByRole('region', { name: '區域 陽台' })
   check((await balc.locator('input[data-dim]').nth(0).inputValue()) === '62' && (await balc.getByLabel('照片 1 說明').inputValue()) === '安裝空間正面', '陽台的尺寸與照片（含說明）與現場拍攝一致')
   check(await p.getByRole('region', { name: '區域 大門' }).count() === 1, '新增的「大門」區域出現在場勘頁')
@@ -138,7 +146,7 @@ async function device(browser, catalog) {
   const b = W.getByRole('button', { name: /展開全部欄位/ }); await b.click()
   check((await W.locator('input[data-field="front_clearance_cm"]').inputValue()) === '80' && (await W.locator('[data-field="outlet"][data-value="no"]').getAttribute('aria-checked')) === 'true', '詳細欄位與現場拍攝填寫的值相同')
   await synced(p)
-  await p.screenshot({ path: S + '/field-detail.png' })
+  await p.screenshot({ path: S + '/field-detail.png', fullPage: true })
 
   console.log('— 清理')
   await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()

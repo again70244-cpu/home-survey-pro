@@ -68,6 +68,8 @@ async function device(browser, catalog) {
 
   console.log('— 一鍵新增「冰箱安裝位置」')
   await F.getByRole('button', { name: /新增「冰箱安裝位置」區域/ }).click()
+  const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
+  await expandAreas()
   check(await until(async () => (await p.getByRole('region', { name: '區域 冰箱安裝位置' }).count()) === 1), '新增區域「冰箱安裝位置」')
   check(await until(async () => (await F.locator('#fridge-install-area option:checked').innerText()).startsWith('冰箱安裝位置')), '自動設為冰箱的安裝位置')
   check(await until(async () => (await F.locator('[data-finding="install:dims"]').count()) === 1), '尚未量寬深高 → 必須人工確認')

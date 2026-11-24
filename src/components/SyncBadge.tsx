@@ -7,7 +7,7 @@ const styles: Record<RowSyncState, [string, string]> = {
   local: ['本機已保存', 'text-oak'],
   syncing: ['同步中', 'text-sub'],
   waiting: ['等待網路同步', 'text-oak'],
-  synced: ['已同步', 'text-[#555]'],
+  synced: ['已同步', 'text-ink/75'],
   error: ['同步失敗', 'text-red-700'],
   conflict: ['版本衝突待處理', 'text-red-700'],
 }
