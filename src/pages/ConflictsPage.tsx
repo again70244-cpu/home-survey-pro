@@ -37,7 +37,7 @@ function ConflictCard({ c }: { c: ConflictItem }) {
     <Card>
       <div className="text-xs font-medium tracking-[0.18em] text-sub">{TABLE_LABEL[c.table]}</div>
       <div className="mt-0.5 text-xl font-light text-ink">{title || '（未命名）'}</div>
-      <div className="mt-3 border-t border-ink">
+      <div className="mt-3">
         <div className="grid grid-cols-[5.5rem_1fr_1fr] border-b border-line text-xs text-sub">
           <div className="px-2 py-2">欄位</div>
           <div className="px-2 py-2">此裝置<div className="font-normal">{when(c.local.updated_at)}</div></div>

@@ -98,7 +98,7 @@ export function CatalogProductPage() {
           </div>
         )}
 
-        <section className="border-t border-line py-5" aria-label="安裝資訊">
+        <section className="glass-card my-3 p-5" aria-label="安裝資訊">
           <h2 className="mb-4 text-xs font-medium tracking-[0.18em] text-sub">安裝資訊</h2>
           {p.data_quality === 'missing' ? (
             <p className="bg-sand py-5 text-center text-sm text-oak">Google Sheets 尚未提供此產品的安裝尺寸</p>
@@ -114,21 +114,21 @@ export function CatalogProductPage() {
           {notes.length > 0 && <ul className="mt-3 space-y-0.5 text-xs text-sub">{notes.map((n) => <li key={n}>※ {n}</li>)}</ul>}
           {p.install_text_raw && (
             <div className="mt-4">
-              <button onClick={() => setRaw((v) => !v)} className="text-[13px] underline underline-offset-4">{raw ? '收起原文' : '查看試算表原文'}</button>
+              <button onClick={() => setRaw((v) => !v)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink">{raw ? '收起原文' : '查看試算表原文'}</button>
               {raw && <pre className="mt-2 whitespace-pre-wrap break-words bg-sand p-3 font-sans text-[13px] text-ink">{p.install_text_raw}</pre>}
             </div>
           )}
         </section>
 
         {systems.length > 0 && (
-          <section className="border-t border-line py-5">
+          <section className="glass-card my-3 p-5">
             <h2 className="mb-2 text-xs font-medium tracking-[0.18em] text-sub">可搭配一對多室外機</h2>
             <ul>{systems.map((s) => <li key={s.id}><Link to="/catalog/multi-split" className="text-[15px] underline underline-offset-4">{s.model_code}{s.capacity_kw ? `（${s.capacity_kw}KW）` : ''}</Link></li>)}</ul>
           </section>
         )}
 
         {(p.link_urls.length > 0 || p.video_urls.length > 0) && (
-          <section className="border-t border-line py-5">
+          <section className="glass-card my-3 p-5">
             <h2 className="mb-2 text-xs font-medium tracking-[0.18em] text-sub">相關連結</h2>
             <ul className="space-y-2 text-[15px]">
               {p.link_urls.map((u) => <li key={u}><a href={u} target="_blank" rel="noreferrer" className="break-all underline underline-offset-4">{u}</a></li>)}
@@ -137,12 +137,12 @@ export function CatalogProductPage() {
           </section>
         )}
 
-        <section className="border-t border-line py-5">
+        <section className="glass-card my-3 p-5">
           <h2 className="mb-2 text-xs font-medium tracking-[0.18em] text-sub">保養說明</h2>
           <p className={`whitespace-pre-wrap text-[15px] ${p.maintenance_notes ? '' : 'text-sub'}`}>{p.maintenance_notes || 'Google Sheets 尚未提供'}</p>
         </section>
 
-        <section className="border-t border-line py-5 text-[13px] text-sub">
+        <section className="glass-card my-3 p-5 text-[13px] text-sub">
           <div className="flex justify-between"><span>規格最後更新</span><span>{fmtTime(p.spec_updated_at)}</span></div>
           <div className="flex justify-between"><span>最後同步</span><span>{fmtTime(p.last_synced_at)}</span></div>
           <div className="flex justify-between"><span>資料來源</span><span>Google Sheets「報價」第 {p.source_row ?? '—'} 列</span></div>

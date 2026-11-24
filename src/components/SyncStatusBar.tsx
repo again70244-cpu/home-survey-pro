@@ -24,14 +24,14 @@ export function SyncStatusBar({ compact = false, alertsOnly = false }: { compact
       return (
         <Link to="/conflicts" className="flex items-center justify-between gap-3 border-l-2 border-red-700 bg-red-50 px-3.5 py-3 text-sm text-red-800">
           <span>有 {s.conflicts} 筆資料在兩台裝置都被修改，請選擇要保留的版本</span>
-          <span className="shrink-0 underline underline-offset-4">處理</span>
+          <span className="glass shrink-0 rounded-full px-3 py-1 text-ink">處理</span>
         </Link>
       )
     if (s.phase === 'error')
       return (
         <div className="flex items-center justify-between gap-3 border-l-2 border-red-700 bg-red-50 px-3.5 py-3 text-sm text-red-800">
           <span className="min-w-0 break-words">同步失敗：{s.lastError}</span>
-          <button onClick={() => void retrySync()} className="shrink-0 border border-red-700 bg-white px-3 py-1.5 active:bg-red-100">
+          <button onClick={() => void retrySync()} className="glass shrink-0 rounded-full px-3 py-1.5 text-red-700">
             重試
           </button>
         </div>

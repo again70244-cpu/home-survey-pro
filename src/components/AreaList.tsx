@@ -26,7 +26,7 @@ export function CompletenessCard({ sum }: { sum: SurveySummary }) {
   const total = sum.areas.length
   const pct = total ? Math.round((sum.completeAreas / total) * 100) : 0
   return (
-    <section className="border-t border-line py-5" aria-label="場勘完成度">
+    <section className="glass-card my-3 p-5" aria-label="場勘完成度">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">場勘完成度</h2>
         <span className={`text-xs ${sum.complete ? 'text-[#555]' : 'text-oak'}`}>{sum.complete ? '✓ 場勘完整' : '尚未完成'}</span>
@@ -35,12 +35,12 @@ export function CompletenessCard({ sum }: { sum: SurveySummary }) {
         <span className="text-4xl font-light tabular-nums text-ink">{sum.completeAreas}</span>
         <span className="text-sm text-sub">/ {total} 個區域完成（尺寸＋照片）</span>
       </div>
-      <div className="mt-3 h-[2px] bg-line">
-        <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/[0.08]">
+        <div className="h-full rounded-full bg-ink" style={{ width: `${pct}%` }} />
       </div>
       {sum.missing.length > 0 && (
         <div className="mt-3">
-          <button onClick={() => setOpen((v) => !v)} className="text-sm text-oak underline decoration-1 underline-offset-4">
+          <button onClick={() => setOpen((v) => !v)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-[13px] text-amber-700">
             {open ? '收起' : `離開現場前請確認：${sum.missing.length} 項未完成`}
           </button>
           {open && (
@@ -83,7 +83,7 @@ function AddAreaSheet({ surveyId, onClose }: { surveyId: string; onClose: () => 
   }
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-black/30" onClick={onClose}>
-      <div className="w-full bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full rounded-t-[28px] bg-white/95 px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6 backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="mb-5 text-2xl font-light text-ink">新增場勘區域</h3>
         <div className="text-xs tracking-[0.18em] text-sub">基本區域</div>
         <div className="mt-2 grid grid-cols-3 gap-2">
@@ -122,7 +122,7 @@ export function AreaList({ surveyId, sum }: { surveyId: string; sum: SurveySumma
       <div className="flex items-baseline justify-between border-t border-line pt-5">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">場勘區域（{list.length}）</h2>
         {list.length > 1 && (
-          <button onClick={() => setSorting((v) => !v)} className="text-sm text-ink underline decoration-1 underline-offset-4">
+          <button onClick={() => setSorting((v) => !v)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink">
             {sorting ? '完成排序' : '調整排序'}
           </button>
         )}

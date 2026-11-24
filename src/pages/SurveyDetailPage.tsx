@@ -101,7 +101,7 @@ export function SurveyDetailPage() {
           </Link>
         </Card>
         <div className="pb-8">
-          <button onClick={onDelete} className="h-12 w-full text-sm text-red-700 underline underline-offset-4">
+          <button onClick={onDelete} className="glass h-12 w-full rounded-full text-sm text-red-700">
             刪除這筆場勘
           </button>
         </div>

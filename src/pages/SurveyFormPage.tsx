@@ -85,7 +85,7 @@ export function SurveyFormPage() {
       ) : (
         <form id="survey-form" onSubmit={submit} className="mx-auto max-w-2xl px-6">
           <PageTitle eyebrow={isNew ? 'NEW SURVEY' : 'EDIT SURVEY'} title={isNew ? '新增場勘' : '編輯場勘'} />
-          <section className="space-y-5 border-t border-ink py-6">
+          <section className="glass-card space-y-5 p-5">
             <h2 className="text-xs font-medium tracking-[0.18em] text-sub">客戶資料</h2>
             <Field label="客戶姓名">
               <TextInput required value={form.customer_name} onChange={set('customer_name')} placeholder="例如：王小明" />
@@ -100,7 +100,7 @@ export function SurveyFormPage() {
               <TextInput value={form.customer_address ?? ''} onChange={set('customer_address')} />
             </Field>
           </section>
-          <section className="space-y-5 border-t border-line py-6">
+          <section className="glass-card mt-3 space-y-5 p-5">
             <h2 className="text-xs font-medium tracking-[0.18em] text-sub">預計安裝產品</h2>
             {isNew && (
               <div>
@@ -112,7 +112,7 @@ export function SurveyFormPage() {
                           <span className="block text-[16px]">{p.model_code}</span>
                           <span className="block truncate text-xs text-sub">{p.width_cm != null ? `寬 ${p.width_cm}・高 ${p.height_cm ?? '—'}・深 ${p.depth_cm ?? '—'} cm` : '試算表未提供安裝尺寸'}</span>
                         </span>
-                        <button type="button" onClick={() => setPicked((x) => x.filter((y) => y.id !== p.id))} className="h-9 shrink-0 px-1 text-[13px] text-red-700 underline underline-offset-4" aria-label={`取消選擇 ${p.model_code}`}>取消</button>
+                        <button type="button" onClick={() => setPicked((x) => x.filter((y) => y.id !== p.id))} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] shrink-0 text-red-700" aria-label={`取消選擇 ${p.model_code}`}>取消</button>
                       </li>
                     ))}
                   </ul>
@@ -132,8 +132,8 @@ export function SurveyFormPage() {
         </form>
       )}
       {form && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
-          <div className="mx-auto max-w-2xl">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
+          <div className="pointer-events-auto mx-auto max-w-2xl">
             <Button type="submit" form="survey-form" disabled={busy} className="h-14 w-full">
               {busy ? '儲存中…' : isNew ? '建立場勘' : '儲存修改'}
             </Button>

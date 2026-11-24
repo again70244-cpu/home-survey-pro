@@ -174,7 +174,7 @@ export function ReportPage() {
       <TopBar left={<IconButton label="返回" onClick={() => nav(-1)}>{Icon.back}返回</IconButton>} />
       <main className="mx-auto max-w-2xl space-y-4 px-6">
         <PageTitle eyebrow="REPORT" title="場勘報告" />
-        <div className="grid grid-cols-2 border border-ink" role="tablist" aria-label="報告版本">
+        <div className="glass grid grid-cols-2 gap-1 rounded-full p-1" role="tablist" aria-label="報告版本">
           {(['installer', 'customer'] as const).map((v) => (
             <button
               key={v}
@@ -186,7 +186,7 @@ export function ReportPage() {
                 setFiles([]); setPreviews([]); setPages(null); setBlocks([]); setData(null); setStage({ step: 'loading' })
                 setParams(v === 'installer' ? {} : { v }, { replace: true })
               }}
-              className={`h-12 text-[15px] disabled:opacity-50 ${variant === v ? 'bg-ink text-white' : 'bg-white text-ink active:bg-sand'}`}
+              className={`h-11 rounded-full text-[15px] disabled:opacity-50 ${variant === v ? 'glass-dark' : 'text-ink active:bg-black/5'}`}
             >
               {VARIANT_LABEL[v]}
               <span className="ml-1.5 text-xs opacity-70">{v === 'installer' ? '給安裝人員' : '給客戶'}</span>
@@ -211,7 +211,7 @@ export function ReportPage() {
             </p>
             <ul className="space-y-3">
               {previews.map((u, i) => (
-                <li key={u} className="border border-line bg-white">
+                <li key={u} className="overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_rgb(70_50_25/0.12)]">
                   <img src={u} alt={`第 ${i + 1} 頁`} className="w-full" />
                 </li>
               ))}
@@ -221,15 +221,15 @@ export function ReportPage() {
       </main>
 
       {stage.step === 'done' && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
-          <div className="mx-auto max-w-2xl space-y-2">
+        <div className="fixed inset-x-0 bottom-0 z-20 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3">
+          <div className="glass-card mx-auto max-w-2xl space-y-2 !rounded-[30px] p-3">
             {shareSupported ? (
               <div className="grid grid-cols-2 gap-2">
                 <Button className="h-14" onClick={() => void onShare()}>分享至 LINE</Button>
                 <Button variant="secondary" className="h-14" onClick={() => void onShare()}>分享全部 {files.length} 張</Button>
               </div>
             ) : (
-              <p className="bg-sand px-3 py-2 text-sm text-ink">
+              <p className="rounded-2xl bg-white/70 px-3 py-2 text-sm text-ink">
                 這個瀏覽器無法一次分享多張圖片。請「下載全部」或「下載 ZIP」後，到 LINE 選擇相簿中的圖片傳送。建議使用 Android Chrome。
               </p>
             )}

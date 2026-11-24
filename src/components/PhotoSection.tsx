@@ -53,8 +53,8 @@ function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number;
     if (v !== (p.caption ?? null)) void updatePhotoCaption(p.id, v)
   }
   return (
-    <li className="bg-white">
-      <button type="button" onClick={onOpen} className="relative block aspect-[4/3] w-full bg-sand-2" aria-label={`檢視照片 ${index + 1}`}>
+    <li>
+      <button type="button" onClick={onOpen} className="relative block aspect-[4/3] w-full overflow-hidden rounded-2xl bg-sand-2" aria-label={`檢視照片 ${index + 1}`}>
         {url ? (
           <img src={url} alt={p.caption ?? `照片 ${index + 1}`} className="h-full w-full object-contain" />
         ) : (
@@ -82,7 +82,7 @@ function PhotoCard({ p, index, total, onOpen }: { p: SurveyPhoto; index: number;
           <button
             type="button"
             onClick={() => confirm('確定刪除這張照片？') && void deletePhoto(p.id)}
-            className="h-9 px-1 text-[13px] text-red-700 underline decoration-1 underline-offset-4 active:bg-red-50"
+            className="glass inline-flex h-9 items-center rounded-full px-3 text-[13px] text-red-700"
             aria-label={`刪除照片 ${index + 1}`}
           >
             刪除
@@ -154,16 +154,16 @@ export function PhotoSection({ areaId, bare = false }: { areaId: string; bare?: 
       <div className="mb-2.5 flex items-baseline justify-between">
         <h2 className="text-[11px] tracking-[0.16em] text-sub">現場照片{photos?.length ? `（${photos.length}）` : ''}</h2>
         {failed && (
-          <button onClick={() => void retrySync()} className="text-sm text-red-700 underline decoration-1 underline-offset-4">
+          <button onClick={() => void retrySync()} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-red-700">
             重新上傳
           </button>
         )}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" disabled={!!busy} onClick={() => camRef.current?.click()} className={`${btn} bg-ink text-white active:bg-black`}>
+        <button type="button" disabled={!!busy} onClick={() => camRef.current?.click()} className={`${btn} glass-dark rounded-full`}>
           {Icon.camera}拍照
         </button>
-        <button type="button" disabled={!!busy} onClick={() => galRef.current?.click()} className={`${btn} border border-ink text-ink active:bg-sand`}>
+        <button type="button" disabled={!!busy} onClick={() => galRef.current?.click()} className={`${btn} glass rounded-full text-ink`}>
           {Icon.image}從相簿選取
         </button>
       </div>

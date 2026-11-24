@@ -13,7 +13,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {msg && (
         <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4" role="status">
-          <div className="bg-ink px-5 py-3 text-sm tracking-wide text-white">{msg}</div>
+          <div className="glass-dark rounded-full px-5 py-3 text-sm tracking-wide">{msg}</div>
         </div>
       )}
     </ToastContext.Provider>

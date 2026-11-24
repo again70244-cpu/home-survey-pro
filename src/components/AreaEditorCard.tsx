@@ -105,7 +105,7 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
   const DIM_EN: Record<DimKey, string> = { width_cm: 'WIDTH', depth_cm: 'DEPTH', height_cm: 'HEIGHT' }
 
   return (
-    <section id={`area-${a.id}`} className="scroll-mt-20 border-b border-line py-6" aria-label={`區域 ${a.name}`}>
+    <section id={`area-${a.id}`} className="scroll-mt-20 glass-card my-3 p-5" aria-label={`區域 ${a.name}`}>
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           {renaming ? (
@@ -132,28 +132,28 @@ export function AreaEditorCard({ s, index, total, sorting }: { s: AreaStatus; in
         </div>
         {sorting ? (
           <div className="flex gap-1">
-            <button aria-label={`${a.name} 上移`} disabled={index === 0} onClick={() => void moveArea(a.survey_id, a.id, -1)} className="h-11 w-11 border border-ink text-lg disabled:border-line disabled:text-[#c4c4c4] active:bg-sand">↑</button>
-            <button aria-label={`${a.name} 下移`} disabled={index === total - 1} onClick={() => void moveArea(a.survey_id, a.id, 1)} className="h-11 w-11 border border-ink text-lg disabled:border-line disabled:text-[#c4c4c4] active:bg-sand">↓</button>
+            <button aria-label={`${a.name} 上移`} disabled={index === 0} onClick={() => void moveArea(a.survey_id, a.id, -1)} className="glass h-11 w-11 rounded-full text-lg disabled:opacity-40">↑</button>
+            <button aria-label={`${a.name} 下移`} disabled={index === total - 1} onClick={() => void moveArea(a.survey_id, a.id, 1)} className="glass h-11 w-11 rounded-full text-lg disabled:opacity-40">↓</button>
           </div>
         ) : (
-          <div className="flex shrink-0 text-[13px]">
-            <button onClick={() => setRenaming(true)} className="h-10 px-2 text-sub underline decoration-1 underline-offset-4 active:bg-sand" aria-label={`${a.name} 改名`}>改名</button>
-            <button onClick={() => void onDelete()} className="h-10 px-2 text-red-700 underline decoration-1 underline-offset-4 active:bg-red-50" aria-label={`刪除區域 ${a.name}`}>刪除</button>
+          <div className="flex shrink-0 gap-1.5">
+            <button onClick={() => setRenaming(true)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink" aria-label={`${a.name} 改名`}>改名</button>
+            <button onClick={() => void onDelete()} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-red-700" aria-label={`刪除區域 ${a.name}`}>刪除</button>
           </div>
         )}
       </div>
 
       {!sorting && (
         <>
-          <div className="mt-4 grid grid-cols-3 border-y border-ink">
-            {DIMS.map((d, k) => {
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {DIMS.map((d) => {
               const t = text[d.key]
               const empty = t.trim() === ''
               const err = errors[d.key]
               return (
                 <label
                   key={d.key}
-                  className={`block py-2.5 focus-within:bg-sand ${k === 0 ? 'pr-2.5' : 'pl-2.5'} ${k < 2 ? 'border-r border-line' : ''} ${k === 1 ? 'pr-2.5' : ''} ${empty ? 'bg-sand' : ''}`}
+                  className={`block rounded-2xl border px-3 py-2.5 focus-within:border-ink/40 ${empty ? 'border-white/60 bg-white/40' : 'border-white/90 bg-white/75'}`}
                 >
                   <span className="flex items-baseline justify-between text-[10px] tracking-[0.14em] text-sub">
                     <span>{d.label} {DIM_EN[d.key]}</span>

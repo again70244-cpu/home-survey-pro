@@ -13,7 +13,7 @@ export const LEVEL_STYLE: Record<RiskLevel, string> = {
   high: 'border-red-700 bg-red-50 text-red-800',
   confirm: 'border-oak bg-sand text-ink',
   caution: 'border-[#b8860b] bg-[#fdf8ec] text-ink',
-  info: 'border-line bg-white text-[#555]',
+  info: 'border-white/80 bg-white/70 text-[#555]',
 }
 
 /** 載入模板檢查需要的資料，並計算結果（報告頁也共用）；id = templateRowId(surveyId, def.id) */
@@ -42,7 +42,7 @@ function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown;
     <fieldset>
       <legend className="mb-1.5 text-[13px] text-ink">{f.label}{f.required && <span className="ml-1 text-oak">*</span>}</legend>
       {f.hint && <p className="-mt-1 mb-1.5 text-xs text-sub">{f.hint}</p>}
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={f.label}>
+      <div className="flex flex-wrap gap-1 rounded-[22px] bg-black/[0.06] p-1" role="radiogroup" aria-label={f.label}>
         {f.options!.map((o) => {
           const on = value === o.value
           return (
@@ -54,7 +54,7 @@ function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown;
               data-field={f.key}
               data-value={o.value}
               onClick={() => onChange(on ? null : o.value)}
-              className={`h-10 min-w-16 border px-3 text-sm ${on ? 'border-ink bg-ink text-white' : 'border-line bg-white text-ink active:bg-sand'}`}
+              className={`h-10 min-w-16 flex-1 rounded-full px-3 text-sm ${on ? 'glass-dark' : 'text-ink active:bg-black/5'}`}
             >
               {o.label}
             </button>
@@ -116,9 +116,9 @@ export function FindingItem({ f }: { f: Finding }) {
 export function ResultSummary({ r }: { r: CheckResult }) {
   const levels: RiskLevel[] = ['high', 'confirm', 'caution', 'info']
   return (
-    <div className="grid grid-cols-4 border-y border-ink text-center" aria-label="檢查結果統計">
-      {levels.map((l, i) => (
-        <div key={l} className={`py-2 ${i < 3 ? 'border-r border-line' : ''}`}>
+    <div className="grid grid-cols-4 gap-1.5 text-center" aria-label="檢查結果統計">
+      {levels.map((l) => (
+        <div key={l} className={`rounded-2xl py-2 ${r.counts[l] && l === 'high' ? 'bg-red-100/70' : 'bg-white/60'}`}>
           <div className={`text-xl font-light tabular-nums ${r.counts[l] && l === 'high' ? 'text-red-700' : ''}`} data-count={l}>{r.counts[l]}</div>
           <div className="text-[10px] tracking-[0.08em] text-sub">{RISK_LABEL[l]}</div>
         </div>
@@ -144,8 +144,8 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
 
   if (!data.active)
     return (
-      <section className="border-t border-line py-4" aria-label={def.title}>
-        <button className="text-[13px] text-ink underline underline-offset-4" onClick={() => void save({})}>
+      <section className="my-3 px-1" aria-label={def.title}>
+        <button className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink" onClick={() => void save({})}>
           {def.enableLabel}
         </button>
       </section>
@@ -177,7 +177,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
   const shots = def.shots.filter((s) => s.when?.(v) ?? true)
   const visible = showAll ? findings : findings.filter((f) => f.level !== 'info')
   return (
-    <section className="border-t border-line py-5" aria-label={def.title}>
+    <section className="glass-card my-3 p-5" aria-label={def.title}>
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">{def.title}</h2>
         <span className="text-[13px] tabular-nums text-ink" data-testid={`${def.id}-score`}>完成度 {r!.score.percent}%</span>
@@ -193,7 +193,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
           <p className="mt-3 bg-sand px-3 py-3 text-sm text-ink">{findings.length ? '沒有需要注意的項目' : '目前沒有發現問題'}</p>
         )}
         {findings.some((f) => f.level === 'info') && (
-          <button className="mt-2 text-[13px] text-ink underline underline-offset-4" onClick={() => setShowAll((x) => !x)}>
+          <button className="mt-2 glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink" onClick={() => setShowAll((x) => !x)}>
             {showAll ? '隱藏一般提醒' : `顯示一般提醒（${r!.counts.info}）`}
           </button>
         )}
@@ -207,7 +207,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
           id={`${def.id}-install-area`}
           value={installArea?.id ?? ''}
           onChange={(e) => void save({ install_area_id: e.target.value || null })}
-          className="block h-11 w-full border border-line bg-white px-2 text-[15px]"
+          className="glass block h-12 w-full rounded-full px-4 text-[15px]"
         >
           {!installArea && <option value="">請選擇</option>}
           {areas.map((a) => (
@@ -261,7 +261,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
             const done = data.shotsTaken.has(s.key)
             return (
               <li key={s.key} className="flex items-center gap-3 py-2" data-shot={s.key} data-done={done ? 1 : 0}>
-                <span className={`flex h-6 w-6 shrink-0 items-center justify-center border text-xs ${done ? 'border-ink bg-ink text-white' : 'border-line text-transparent'}`} aria-hidden>✓</span>
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${done ? 'bg-ink text-white' : 'border-[1.5px] border-dashed border-black/30 text-transparent'}`} aria-hidden>✓</span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[15px]">{s.label}</div>
                   <div className="truncate text-xs text-sub">{s.hint}</div>

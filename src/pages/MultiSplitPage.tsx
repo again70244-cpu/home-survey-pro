@@ -15,7 +15,7 @@ export function MultiSplitPage() {
         <PageTitle eyebrow="MULTI-SPLIT" title="一對多冷氣搭配" />
         {systems?.length === 0 && <p className="py-10 text-center text-sub">尚未下載一對多搭配資料</p>}
         {systems?.map((s) => (
-          <section key={s.id} className="border-t border-ink py-5" aria-label={`室外機 ${s.model_code}`}>
+          <section key={s.id} className="glass-card my-3 p-5" aria-label={`室外機 ${s.model_code}`}>
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-2xl font-light">{s.model_code}</h2>
               <span className="text-sm text-[#555]">{s.capacity_kw ? `${s.capacity_kw} KW` : ''}</span>

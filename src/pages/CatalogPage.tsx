@@ -29,7 +29,7 @@ function SyncStatus({ products }: { products: CatalogProduct[] }) {
     <section className="border-y border-line py-4" aria-label="同步狀態">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">資料同步</h2>
-        <button onClick={() => void refreshCatalog(true)} className="text-[13px] underline underline-offset-4" disabled={sync.phase === 'checking' || sync.phase === 'downloading'}>
+        <button onClick={() => void refreshCatalog(true)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink disabled:opacity-40" disabled={sync.phase === 'checking' || sync.phase === 'downloading'}>
           {sync.phase === 'checking' ? '檢查中…' : sync.phase === 'downloading' ? '下載中…' : '重新整理'}
         </button>
       </div>
@@ -46,7 +46,7 @@ function SyncStatus({ products }: { products: CatalogProduct[] }) {
       {ok === false && <p className="mt-2 text-[13px] text-red-700">最近一次同步沒有成功，目前顯示的是最後一次成功同步的資料。{last?.error ? `（${last.error}）` : ''}</p>}
       {sync.phase === 'offline' && <p className="mt-2 text-[13px] text-oak">離線中，顯示這台裝置最後下載的資料</p>}
       {sync.phase === 'error' && <p className="mt-2 text-[13px] text-red-700">下載失敗：{sync.error}（仍顯示既有資料）</p>}
-      <div className="mt-4 grid grid-cols-4 border-t border-ink text-center">
+      <div className="glass-card mt-4 grid grid-cols-4 p-2 text-center">
         {(
           [
             ['產品', st.total],
@@ -80,7 +80,7 @@ export function CatalogPage() {
   }, [products])
   const results = useMemo(() => (products ? searchProducts(products, { text: q, category: cat, quality }) : []), [products, q, cat, quality])
 
-  const chip = (active: boolean) => `shrink-0 border px-3 py-1.5 text-[13px] ${active ? 'border-ink bg-ink text-white' : 'border-line text-ink active:bg-sand'}`
+  const chip = (active: boolean) => `shrink-0 rounded-full px-3.5 py-1.5 text-[13px] ${active ? 'glass-dark' : 'glass text-ink'}`
 
   return (
     <div className="min-h-dvh pb-10">
@@ -104,7 +104,7 @@ export function CatalogPage() {
         </div>
         <div className="mt-2 flex gap-4 text-[13px]" role="group" aria-label="安裝資料">
           {([['all', '全部'], ['with', '有安裝尺寸'], ['missing', '缺少安裝資料']] as const).map(([k, l]) => (
-            <button key={k} onClick={() => setQuality(k)} className={quality === k ? 'text-ink underline underline-offset-4' : 'text-sub'}>{l}</button>
+            <button key={k} onClick={() => setQuality(k)} className={`rounded-full px-3 py-1 ${quality === k ? 'glass-dark' : 'text-sub'}`}>{l}</button>
           ))}
         </div>
 
@@ -115,7 +115,7 @@ export function CatalogPage() {
         ) : (
           <>
             <p className="mt-4 text-xs text-sub">{results.length} 筆</p>
-            <ul className="mt-1 border-t border-ink">
+            <ul className="glass-card mt-2 px-4">
               {results.map((p) => (
                 <li key={p.id} className="border-b border-line">
                   <Link to={`/catalog/${p.id}`} className="flex items-center gap-4 py-4 active:bg-sand">

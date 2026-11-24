@@ -14,13 +14,13 @@ export function ProductPicker({ onPick, onClose, selected = [] }: { onPick: (p: 
   const all = useLiveQuery(() => db.catalog_products.toArray(), [])
   const cats = useMemo(() => [...new Set((all ?? []).filter((p) => p.is_active && p.category).map((p) => p.category!))], [all])
   const results = useMemo(() => (all ? searchProducts(all, { text: q, category: cat, quality: 'all' }).slice(0, 60) : []), [all, q, cat])
-  const chip = (on: boolean) => `shrink-0 border px-3 py-1.5 text-[13px] ${on ? 'border-ink bg-ink text-white' : 'border-line'}`
+  const chip = (on: boolean) => `shrink-0 rounded-full px-3.5 py-1.5 text-[13px] ${on ? 'glass-dark' : 'glass text-ink'}`
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-white" role="dialog" aria-label="選擇 LG 產品">
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#f8f4ee]" role="dialog" aria-label="選擇 LG 產品">
       <div className="flex items-center justify-between border-b border-line px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
         <h2 className="text-xl font-light">選擇 LG 產品</h2>
-        <button onClick={onClose} className="h-11 px-2 text-[15px] underline underline-offset-4">完成</button>
+        <button onClick={onClose} className="glass-dark inline-flex h-11 items-center rounded-full px-5 text-[15px]">完成</button>
       </div>
       <div className="px-4 pt-3">
         <div className="relative">
@@ -50,7 +50,7 @@ export function ProductPicker({ onPick, onClose, selected = [] }: { onPick: (p: 
                       <span className="block truncate text-xs text-sub">{p.display_name || p.category}</span>
                       <span className={`text-xs ${p.data_quality === 'complete' ? 'text-[#555]' : p.data_quality === 'missing' ? 'text-oak' : 'text-red-700'}`}>{QUALITY_LABEL[p.data_quality]}</span>
                     </span>
-                    <span className={`shrink-0 text-[13px] ${picked ? 'text-[#555]' : 'underline underline-offset-4'}`}>{picked ? '✓ 已選' : '選擇'}</span>
+                    <span className={`shrink-0 text-[13px] ${picked ? 'text-[#555]' : 'glass rounded-full px-3 py-1.5 text-ink'}`}>{picked ? '✓ 已選' : '選擇'}</span>
                   </button>
                 </li>
               )

@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /*
- * 白樺（Birch）北歐極簡主題
- * 純白底、黑色字、細線分隔、木質米色點綴；方角、無陰影
+ * 白樺（Birch）＋ Liquid Glass
+ * 淡暖色底、黑色字、半透明毛玻璃按鈕與卡片、木質米色點綴
  * 以覆寫色票的方式套用到全部元件：brand → 墨黑、amber → 木質色（待補）、emerald → 深灰（完成）
  */
 @theme {
@@ -37,22 +37,75 @@
   --color-emerald-700: #222222;
   --color-emerald-800: #1a1a1a;
 
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 0px;
-  --radius-2xl: 0px;
-  --radius-3xl: 0px;
+  /* Liquid Glass：圓角膠囊與卡片 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --radius-3xl: 26px;
 
   --shadow-sm: none;
   --shadow-md: none;
 }
 
 html, body, #root { min-height: 100%; }
+html { background-color: #f8f4ee; }
 body {
-  @apply bg-white text-ink antialiased;
+  @apply text-ink antialiased;
+  /* 淡暖色底：毛玻璃需要有一點層次才看得出來（純白底上幾乎看不到） */
+  background-color: #f8f4ee;
+  background-image:
+    radial-gradient(520px 420px at -10% 18%, rgb(227 211 187 / 0.55), transparent 70%),
+    radial-gradient(560px 460px at 115% 62%, rgb(217 198 168 / 0.45), transparent 70%),
+    linear-gradient(170deg, #f7f2ea 0%, #fbf9f5 45%, #efe6d8 100%);
+  background-attachment: fixed;
   -webkit-tap-highlight-color: transparent;
   font-feature-settings: "tnum" 1;
 }
 input, textarea, select { font-size: 16px; } /* 避免 iOS 聚焦時自動放大 */
 ::placeholder { color: #b5b5b5; }
+
+/* ---------------------------------------------------------------------------
+ * Liquid Glass
+ *   glass       淺色玻璃：一般按鈕、輸入框
+ *   glass-dark  深色玻璃：主要按鈕（新增場勘、拍照、分享）
+ *   glass-card  卡片：區塊容器
+ * 不支援模糊（backdrop-filter）或使用者要求降低透明度時，自動改成不透明，文字一樣清楚
+ * ------------------------------------------------------------------------- */
+@utility glass {
+  background: rgb(255 255 255 / 0.58);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.8);
+  box-shadow: 0 6px 20px rgb(70 50 25 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.95), inset 0 -1px 0 rgb(70 50 25 / 0.06);
+}
+@utility glass-dark {
+  background: rgb(22 20 18 / 0.84);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.28);
+  color: #fff;
+}
+@utility glass-card {
+  background: rgb(255 255 255 / 0.5);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow: 0 8px 30px rgb(70 50 25 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  border-radius: 24px;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: rgb(255 255 255 / 0.94); }
+  .glass-card { background: rgb(255 255 255 / 0.9); }
+  .glass-dark { background: #161412; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-card, .glass-dark { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass { background: #fff; }
+  .glass-card { background: rgb(255 255 255 / 0.95); }
+  .glass-dark { background: #161412; }
+}
+/* 按下時的回饋 */
+.glass:active, .glass-dark:active { transform: scale(0.98); }

@@ -45,8 +45,8 @@ export function LoginPage() {
         <Button type="submit" disabled={busy} className="mt-2 h-14 w-full">{busy ? '登入中…' : '登入'}</Button>
       </form>
       <div className="mt-4 flex justify-between text-sm">
-        <Link to="/forgot" className="text-sub underline underline-offset-4">忘記密碼？</Link>
-        <Link to="/signup" className="font-medium text-ink underline underline-offset-4">建立新帳號</Link>
+        <Link to="/forgot" className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[14px] text-ink">忘記密碼？</Link>
+        <Link to="/signup" className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[14px] text-ink font-medium">建立新帳號</Link>
       </div>
     </AuthLayout>
   )
@@ -83,7 +83,7 @@ export function SignupPage() {
         <InfoBox>
           驗證信已寄到 <b>{email}</b>。請用<b>這支手機的同一個瀏覽器</b>開啟信中的連結，完成後就會自動登入。
         </InfoBox>
-        <Link to="/login" className="mt-4 block text-center text-sm text-ink underline underline-offset-4">回到登入</Link>
+        <Link to="/login" className="mx-auto mt-4 flex w-fit glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[14px] text-ink">回到登入</Link>
       </AuthLayout>
     )
 
@@ -168,7 +168,7 @@ export function ResetPasswordPage() {
     return (
       <AuthLayout title="重設密碼">
         <ErrorBox>重設連結已失效，或不是在送出申請的同一個瀏覽器開啟。請重新申請一次。</ErrorBox>
-        <Link to="/forgot" onClick={clearRecovery} className="mt-4 block text-center text-sm text-ink underline underline-offset-4">重新申請</Link>
+        <Link to="/forgot" onClick={clearRecovery} className="mx-auto mt-4 flex w-fit glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[14px] text-ink">重新申請</Link>
       </AuthLayout>
     )
 

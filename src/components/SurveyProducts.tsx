@@ -37,7 +37,7 @@ function SpecEditor({ sp, onClose }: { sp: SurveyProduct; onClose: () => void })
     onClose()
   }
   return (
-    <div className="mt-3 border border-ink p-3" role="group" aria-label={`修正 ${sp.model_code} 規格`}>
+    <div className="mt-3 rounded-2xl border border-white/80 bg-white/70 p-3" role="group" aria-label={`修正 ${sp.model_code} 規格`}>
       <p className="text-xs text-sub">只影響這筆場勘的檢查與報告；產品知識庫不會改變。空白 = 使用產品知識庫的數值。</p>
       {SPEC_GROUPS.map((g) => (
         <div key={g.title} className="mt-3">
@@ -72,7 +72,7 @@ function SpecEditor({ sp, onClose }: { sp: SurveyProduct; onClose: () => void })
         <Button variant="secondary" onClick={onClose}>取消</Button>
       </div>
       {sp.spec_overrides && (
-        <button className="mt-2 text-[13px] text-red-700 underline underline-offset-4" onClick={() => { setVals({}); setNote(''); void updateSurveyProduct(sp.id, { spec_overrides: null }).then(onClose) }}>
+        <button className="mt-2 glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-red-700" onClick={() => { setVals({}); setNote(''); void updateSurveyProduct(sp.id, { spec_overrides: null }).then(onClose) }}>
           清除所有手動修正
         </button>
       )}
@@ -97,18 +97,18 @@ function ProductCard({ sp }: { sp: SurveyProduct }) {
           <div className="text-[17px]">{sp.model_code}</div>
           <div className="truncate text-[13px] text-[#555]">{sp.display_name || sp.category || ''}</div>
         </div>
-        <button onClick={() => confirm(`移除「${sp.model_code}」？`) && void removeSurveyProduct(sp.id)} className="h-9 px-1 text-[13px] text-red-700 underline underline-offset-4" aria-label={`移除產品 ${sp.model_code}`}>
+        <button onClick={() => confirm(`移除「${sp.model_code}」？`) && void removeSurveyProduct(sp.id)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-red-700" aria-label={`移除產品 ${sp.model_code}`}>
           移除
         </button>
       </div>
       {s.data_quality === 'missing' && !hasBody ? (
-        <p className="mt-2 bg-sand px-3 py-2 text-[13px] text-oak">此產品在試算表中沒有安裝尺寸。可按「修正規格」輸入說明書或實測數值。</p>
+        <p className="mt-2 rounded-2xl bg-white/60 px-3 py-2 text-[13px] text-oak">此產品在試算表中沒有安裝尺寸。可按「修正規格」輸入說明書或實測數值。</p>
       ) : (
-        <div className="mt-2 grid grid-cols-3 border-y border-ink text-center tabular-nums">
+        <div className="mt-2 grid grid-cols-3 gap-2 text-center tabular-nums">
           {(['width_cm', 'height_cm', 'depth_cm'] as const).map((f, i) => {
             const x = specValueOf(sp, f)
             return (
-              <div key={f} className={`py-1.5 ${i < 2 ? 'border-r border-line' : ''} ${x.manual ? 'bg-sand' : ''}`} data-spec={f} data-manual={x.manual ? 1 : 0}>
+              <div key={f} className={`rounded-2xl py-1.5 ${x.manual ? 'bg-amber-100/80' : 'bg-white/60'}`} data-spec={f} data-manual={x.manual ? 1 : 0}>
                 <div className="text-[10px] tracking-[0.14em] text-sub">{['寬', '高', '深'][i]}{x.manual && <span className="ml-1 text-oak">手動</span>}</div>
                 <div className={`text-xl font-light ${x.value === null ? 'text-oak' : ''}`}>{dim(x.value)}</div>
               </div>
@@ -128,20 +128,20 @@ function ProductCard({ sp }: { sp: SurveyProduct }) {
           aria-label={`${sp.model_code} 適用檢查`}
           value={sp.template_type ?? ''}
           onChange={(e) => void updateSurveyProduct(sp.id, { template_type: e.target.value || null })}
-          className="h-9 flex-1 border border-line bg-white px-2 text-[14px]"
+          className="glass h-10 min-w-0 flex-1 rounded-full px-3 text-[14px]"
         >
           <option value="">自動（{tplName(auto)}）</option>
           {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{tplName(t.id)}</option>)}
           <option value="none">不檢查</option>
         </select>
-        <button onClick={() => setEditing((x) => !x)} className="h-9 px-1 text-ink underline underline-offset-4" aria-label={`修正 ${sp.model_code} 規格`}>
+        <button onClick={() => setEditing((x) => !x)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] shrink-0 text-ink" aria-label={`修正 ${sp.model_code} 規格`}>
           {editing ? '收起' : '修正規格'}
         </button>
       </div>
       {editing && <SpecEditor sp={sp} onClose={() => setEditing(false)} />}
       <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2 text-xs text-sub">
         <span>規格快照：{fmtTime(sp.snapshot_at)}{s.data_quality !== 'complete' ? `・${QUALITY_LABEL[s.data_quality]}` : ''}</span>
-        <button onClick={() => setOpen((v) => !v)} className="text-[13px] text-ink underline underline-offset-4">{open ? '收起規格' : '完整規格'}</button>
+        <button onClick={() => setOpen((v) => !v)} className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink">{open ? '收起規格' : '完整規格'}</button>
       </div>
       {changed && (
         <p className="mt-2 border-l-2 border-oak bg-sand px-3 py-2 text-[12px] text-ink">
@@ -170,12 +170,12 @@ export function SurveyProducts({ surveyId }: { surveyId: string }) {
     [surveyId],
   )
   return (
-    <section className="border-t border-line py-5" aria-label="安裝產品">
+    <section className="glass-card my-3 p-5" aria-label="安裝產品">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">安裝產品（{list?.length ?? 0}）</h2>
       </div>
       {list && list.length > 0 ? (
-        <ul className="mt-2 border-t border-ink">{list.map((sp) => <ProductCard key={sp.id} sp={sp} />)}</ul>
+        <ul className="mt-2">{list.map((sp) => <ProductCard key={sp.id} sp={sp} />)}</ul>
       ) : (
         <p className="mt-2 text-sm text-sub">尚未選擇產品。選擇後會自動帶入安裝規格。</p>
       )}

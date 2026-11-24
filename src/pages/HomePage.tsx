@@ -42,9 +42,9 @@ export function HomePage() {
   return (
     <div className="min-h-dvh pb-28">
       <TopBar
-        left={<TextButton onClick={() => nav('/catalog')} aria-label="LG 產品知識庫">產品知識庫</TextButton>}
+        left={<TextButton onClick={() => nav('/catalog')} aria-label="LG 產品知識庫">{Icon.book}產品知識庫</TextButton>}
         right={
-          <TextButton onClick={() => nav('/settings')} aria-label="設定">設定</TextButton>
+          <TextButton onClick={() => nav('/settings')} aria-label="設定">{Icon.settings}設定</TextButton>
         }
       />
       <main className="mx-auto max-w-2xl px-6">
@@ -59,8 +59,8 @@ export function HomePage() {
           }
         />
         <div className="relative">
-          <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-sub">{Icon.search}</span>
-          <TextInput type="search" placeholder="搜尋姓名、電話、地址、型號" value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
+          <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-sub">{Icon.search}</span>
+          <TextInput type="search" placeholder="搜尋姓名、電話、地址、型號" value={q} onChange={(e) => setQ(e.target.value)} className="glass !h-12 rounded-full !border !border-white/80 !py-0 !pl-11 !pr-4" />
         </div>
         <div className="mt-2"><SyncStatusBar alertsOnly /></div>
 
@@ -78,7 +78,7 @@ export function HomePage() {
             )}
           </div>
         ) : (
-          <ul className="mt-4 border-t border-ink">
+          <ul className="glass-card mt-4 px-4">
             {filtered.map((s) => (
               <li key={s.id} className="border-b border-line">
                 <Link to={`/survey/${s.id}`} className="flex items-center gap-3 py-5 active:bg-sand">

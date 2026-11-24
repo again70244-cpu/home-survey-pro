@@ -145,7 +145,7 @@ export function SettingsPage() {
 
       {plan && (
         <div className="fixed inset-0 z-40 flex items-end bg-black/30">
-          <div className="w-full bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6" role="dialog" aria-label="確認還原">
+          <div className="w-full rounded-t-[28px] bg-white/95 px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-6 backdrop-blur-xl" role="dialog" aria-label="確認還原">
             <h3 className="text-2xl font-light text-ink">確認從備份還原</h3>
             <p className="mt-1 text-sm text-sub">備份時間：{new Date(plan.json.exportedAt).toLocaleString('zh-TW')}{plan.json.account?.email ? `・${plan.json.account.email}` : ''}</p>
             <div className="mt-4 grid grid-cols-4 gap-2 text-center">

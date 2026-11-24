@@ -1,13 +1,13 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
 
-/* 白樺（Birch）風格元件：純白、細線、黑色方角按鈕、無陰影 */
+/* 白樺（Birch）＋ Liquid Glass 元件：毛玻璃膠囊按鈕、圓角卡片（樣式定義在 index.css 的 glass 系列） */
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 const variants: Record<Variant, string> = {
-  primary: 'bg-ink text-white tracking-[0.12em] active:bg-black disabled:bg-ink/40',
-  secondary: 'bg-white text-ink border border-ink active:bg-sand',
-  danger: 'bg-white text-red-700 border border-red-200 active:bg-red-50',
-  ghost: 'text-ink active:bg-sand',
+  primary: 'glass-dark tracking-[0.08em] disabled:opacity-40',
+  secondary: 'glass text-ink disabled:opacity-40',
+  danger: 'glass text-red-700 disabled:opacity-40',
+  ghost: 'rounded-full text-ink active:bg-black/5',
 }
 
 export function Button({
@@ -18,14 +18,14 @@ export function Button({
   return (
     <button
       {...rest}
-      className={`inline-flex min-h-12 items-center justify-center gap-2 px-4 text-[15px] font-normal transition disabled:cursor-not-allowed ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-normal transition disabled:cursor-not-allowed ${variants[variant]} ${className}`}
     />
   )
 }
 
 /** 區段：不用卡片框，以上方細線分隔 */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`border-t border-line py-5 ${className}`}>{children}</section>
+  return <section className={`glass-card my-3 p-5 ${className}`}>{children}</section>
 }
 
 /** 區段標題：小字、加寬字距 */
@@ -63,18 +63,18 @@ export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
 
 export function ErrorBox({ children }: { children: ReactNode }) {
   if (!children) return null
-  return <div className="border-l-2 border-red-700 bg-red-50 px-3.5 py-3 text-sm text-red-800">{children}</div>
+  return <div className="rounded-2xl border border-red-700/25 bg-red-50/90 px-4 py-3 text-sm text-red-800">{children}</div>
 }
 
 export function InfoBox({ children }: { children: ReactNode }) {
   if (!children) return null
-  return <div className="border-l-2 border-ink bg-sand px-3.5 py-3 text-sm text-ink">{children}</div>
+  return <div className="glass rounded-2xl px-4 py-3 text-sm text-ink">{children}</div>
 }
 
 /** 頂部列：左側返回、右側文字按鈕；不放置中標題（標題改在頁面內以大字呈現） */
 export function TopBar({ title, left, right }: { title?: ReactNode; left?: ReactNode; right?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-20 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+    <header className="sticky top-0 z-20 pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-14 max-w-2xl items-center gap-2 px-3">
         <div className="flex min-w-12 justify-start">{left}</div>
         <div className="flex-1 truncate text-center text-sm text-sub">{title}</div>
@@ -101,7 +101,7 @@ export function IconButton({ label, children, ...rest }: ButtonHTMLAttributes<HT
       aria-label={label}
       title={label}
       {...rest}
-      className="flex h-11 min-w-11 items-center justify-center gap-1 px-1 text-[15px] text-ink active:bg-sand"
+      className="glass flex h-11 min-w-11 items-center justify-center gap-1 rounded-full pl-2 pr-4 text-[14px] text-ink"
     >
       {children}
     </button>
@@ -111,7 +111,7 @@ export function IconButton({ label, children, ...rest }: ButtonHTMLAttributes<HT
 /** 文字按鈕（加底線） */
 export function TextButton({ children, className = '', ...rest }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button {...rest} className={`h-11 px-2 text-[15px] text-ink underline decoration-1 underline-offset-4 active:bg-sand ${className}`}>
+    <button {...rest} className={`glass inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-[14px] text-ink ${className}`}>
       {children}
     </button>
   )
@@ -120,8 +120,8 @@ export function TextButton({ children, className = '', ...rest }: ButtonHTMLAttr
 /** 固定在底部的主要動作列 */
 export function BottomBar({ children }: { children: ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
-      <div className="mx-auto max-w-2xl">{children}</div>
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
+      <div className="pointer-events-auto mx-auto max-w-2xl">{children}</div>
     </div>
   )
 }
@@ -142,5 +142,6 @@ export const Icon = {
   chevron: svg(<path d="M9 6l6 6-6 6" />, 18),
   camera: svg(<><path d="M3 8h3l2-3h8l2 3h3v11H3z" /><circle cx="12" cy="13" r="3.5" /></>, 20),
   image: svg(<><rect x="3" y="4" width="18" height="16" /><circle cx="9" cy="10" r="2" /><path d="M21 17l-5-5-9 8" /></>, 20),
+  book: svg(<><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z" /><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z" /></>, 18),
   report: svg(<><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5" /></>, 18),
 }
