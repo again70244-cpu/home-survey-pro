@@ -72,7 +72,9 @@ async function editModel(page, name, model) {
   await goHome(a1.page);
   await a1.page.getByText(/離線中/).waitFor();
   console.log('  首頁：', (await a1.page.locator('main').innerText()).slice(0, 400).replace(/\n+/g, ' | '));
-  check(await a1.page.getByText('等待網路同步').count() >= 2, '離線時兩筆都顯示「等待網路同步」');
+  // 列表上的狀態標籤由本機資料庫即時查詢產生，稍晚才出現：等到出現再檢查（避免時間差）
+  { const t = Date.now(); while (Date.now() - t < 15000 && (await a1.page.getByText('等待網路同步').count()) < 3) await a1.page.waitForTimeout(300) }
+  check(await a1.page.getByText('等待網路同步', { exact: true }).count() >= 2, '離線時兩筆都顯示「等待網路同步」');
   await a1.page.screenshot({ path: `${S}/s2-02-offline.png` });
   await a1.ctx.setOffline(false);
   await a1.page.evaluate(() => window.dispatchEvent(new Event('online')));
