@@ -138,6 +138,8 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
   const pendingShot = useRef<ShotItem | null>(null)
   const [busy, setBusy] = useState(false)
   const [showAll, setShowAll] = useState(false)
+  // 詳細欄位與拍攝清單預設收起（現場請用「現場拍攝」一步一步填）
+  const [expanded, setExpanded] = useState(false)
   if (!data) return null
   const save = (patch: Parameters<typeof saveTemplate>[3]) =>
     saveTemplate(surveyId, def.id, def.version, patch).catch((e) => toast(`儲存失敗：${e instanceof Error ? e.message : e}`))
@@ -200,6 +202,17 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
         <p className="mt-2 text-[11px] text-sub">{def.note}・僅供提醒，請以現場判斷為準</p>
       </div>
 
+      <button
+        type="button"
+        onClick={() => setExpanded((x) => !x)}
+        aria-expanded={expanded}
+        className="glass mt-4 flex h-11 w-full items-center justify-center gap-1.5 rounded-full text-[14px] text-ink"
+      >
+        {expanded ? '收起詳細欄位' : '展開全部欄位與拍攝清單'}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden className={expanded ? 'rotate-180' : ''}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+
+      {expanded && (<>
       {/* 安裝位置 */}
       <div className="mt-5 space-y-1">
         <label className="block text-[13px] text-ink" htmlFor={`${def.id}-install-area`}>安裝位置（使用該區域的寬深高）</label>
@@ -285,6 +298,7 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
         <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" data-testid="shot-input" onChange={(e) => { void onShotFile(e.target.files); e.target.value = '' }} />
         <p className="mt-2 text-xs text-sub">照片會存到對應的區域，並自動填上說明。</p>
       </div>
+      </>)}
     </section>
   )
 }

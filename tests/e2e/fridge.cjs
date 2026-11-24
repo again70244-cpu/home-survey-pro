@@ -9,6 +9,7 @@ const S = process.argv[2]; const URL = 'http://localhost:4174/'
 const FX = JSON.parse(fs.readFileSync(S + '/p2/fixtures.json', 'utf8'))
 let ok = 0, bad = 0; const check = (c, m) => { c ? ok++ : bad++; console.log(c ? '✅' : '❌', m) }
 const until = async (fn, ms = 10000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 200)) } return false }
+const expand = async (R) => { const b = R.getByRole('button', { name: /展開全部欄位/ }); await until(async () => (await b.count()) === 1, 15000); await b.click() }
 const synced = async (p) => {
   try { await p.getByText(/^雲端已同步・/).first().waitFor({ timeout: 60000 }) } catch (e) {
     const out = await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const q = r.result.transaction('outbox').objectStore('outbox').getAll(); q.onsuccess = () => res(q.result.map((x) => [x.table, x.attempts, x.lastError])) } }))
@@ -61,6 +62,7 @@ async function device(browser, catalog) {
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
   const F = p.getByRole('region', { name: '冰箱現場檢查' })
   check(await until(async () => (await F.getByTestId('fridge-score').count()) === 1), '場勘頁出現「冰箱現場檢查」')
+  await expand(F)
   check(await p.getByRole('region', { name: '洗衣機現場檢查' }).getByTestId('washer-score').count() === 0 && await p.getByRole('button', { name: '啟用洗衣機／洗衣塔現場檢查' }).count() === 1, '沒選洗衣機：洗衣機檢查只顯示啟用連結')
   check(await F.locator('[data-finding="install:none"][data-level="confirm"]').count() === 1, '不會預設用陽台當冰箱位置 → 必須人工確認')
 
@@ -123,6 +125,7 @@ async function device(browser, catalog) {
   const b = await device(browser, catalog); const q = b.page
   await q.getByText(name, { exact: true }).first().click({ timeout: 30000 }); await q.getByRole('heading', { name, exact: true }).waitFor()
   const F2 = q.getByRole('region', { name: '冰箱現場檢查' })
+  await expand(F2)
   check(await until(async () => (await F2.locator('input[data-field="front_clearance_cm"]').inputValue().catch(() => '')) === '70', 30000), '另一台裝置同步看到欄位值')
   check(await until(async () => (await F2.locator('#fridge-install-area option:checked').innerText().catch(() => '')).startsWith('冰箱安裝位置'), 30000), '另一台裝置使用相同的安裝位置')
   const f1 = await F.locator('[data-finding]').evaluateAll((e) => e.map((x) => x.dataset.finding.replace(/route:[^:]+:/, 'route:')).join(','))

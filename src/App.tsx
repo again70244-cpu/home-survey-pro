@@ -10,6 +10,7 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { ConflictsPage } from './pages/ConflictsPage'
 import { AreaPage } from './pages/AreaPage'
 import { ReportPage } from './pages/ReportPage'
+import { FieldPage } from './pages/FieldPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { CatalogProductPage } from './pages/CatalogProductPage'
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/survey/:id/edit" element={<SurveyFormPage />} />
       <Route path="/survey/:id/area/:areaId" element={<AreaPage />} />
       <Route path="/survey/:id/report" element={<ReportPage />} />
+      <Route path="/survey/:id/field/:tpl" element={<FieldPage />} />
       <Route path="/conflicts" element={<ConflictsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/catalog" element={<CatalogPage />} />

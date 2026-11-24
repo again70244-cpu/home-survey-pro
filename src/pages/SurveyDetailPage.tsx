@@ -8,6 +8,7 @@ import { surveySummary } from '../lib/completeness'
 import { AreaList, CompletenessCard } from '../components/AreaList'
 import { SurveyProducts } from '../components/SurveyProducts'
 import { TemplateChecks } from '../components/TemplateCheck'
+import { FieldCards } from '../components/FieldCard'
 import { BottomBar, Button, Card, Icon, IconButton, PageTitle, SectionLabel, TextButton, TopBar } from '../components/ui'
 import { RowSync } from '../components/SyncBadge'
 import { SyncStatusBar } from '../components/SyncStatusBar'
@@ -82,6 +83,7 @@ export function SurveyDetailPage() {
           <SyncStatusBar alertsOnly />
           {conflict && <p className="text-sm text-red-700">此場勘有版本衝突待處理</p>}
         </div>
+        <FieldCards surveyId={s.id} />
         <CompletenessCard sum={sum} />
         <SurveyProducts surveyId={s.id} />
         <TemplateChecks surveyId={s.id} />

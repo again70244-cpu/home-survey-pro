@@ -6,6 +6,7 @@ import { productTemplate } from '../rules/common'
 import { checkWasher, pickInstallArea } from '../rules/washer'
 import { checkFridge, pickFridgeArea } from '../rules/fridge'
 import { WASHER_SECTIONS, WASHER_SHOTS, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERSION, isWasherCategory, type ShotItem, type TemplateSection } from './washer'
+import { FRIDGE_STEPS, WASHER_STEPS, type FieldStep } from './steps'
 import { FRIDGE_SECTIONS, FRIDGE_SHOTS, FRIDGE_TEMPLATE_ID, FRIDGE_TEMPLATE_VERSION, isFridgeCategory } from './fridge'
 
 export interface TemplateDef {
@@ -24,6 +25,8 @@ export interface TemplateDef {
   isCategory: (category: string | null | undefined) => boolean
   pickArea: (areas: SurveyArea[], installAreaId: string | null) => SurveyArea | null
   check: (input: RuleInput) => CheckResult
+  /** 現場拍攝模式的步驟（先量測，再拍照） */
+  steps: FieldStep[]
   /** 找不到安裝位置時，提供一鍵新增的區域名稱 */
   installAreaName?: string
   /** 拍攝項目要存到哪個區域 */
@@ -42,6 +45,7 @@ export const WASHER: TemplateDef = {
   note: `規則版本 washer v1・預留標準：左右各 2 cm、後方 10 cm`,
   sections: WASHER_SECTIONS,
   shots: WASHER_SHOTS,
+  steps: WASHER_STEPS,
   showIf: {
     faucet_distance_cm: (v) => v.faucet === 'yes',
     drain_distance_cm: (v) => v.drain_type === 'floor' || v.drain_type === 'wall',
@@ -65,6 +69,7 @@ export const FRIDGE: TemplateDef = {
   note: `規則版本 fridge v1・預留標準：左右各 5 cm、上方 5 cm、後方 5 cm`,
   sections: FRIDGE_SECTIONS,
   shots: FRIDGE_SHOTS,
+  steps: FRIDGE_STEPS,
   showIf: {
     outlet_distance_cm: (v) => v.outlet === 'yes',
     outlet_grounded: (v) => v.outlet === 'yes',

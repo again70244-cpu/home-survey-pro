@@ -9,6 +9,7 @@ const S = process.argv[2]; const URL = 'http://localhost:4174/'
 const FX = JSON.parse(fs.readFileSync(S + '/p2/fixtures.json', 'utf8'))
 let ok = 0, bad = 0; const check = (c, m) => { c ? ok++ : bad++; console.log(c ? '✅' : '❌', m) }
 const until = async (fn, ms = 10000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 200)) } return false }
+const expand = async (R) => { const b = R.getByRole('button', { name: /展開全部欄位/ }); await until(async () => (await b.count()) === 1, 15000); await b.click() }
 const synced = async (p) => {
   try { await p.getByText(/^雲端已同步・/).first().waitFor({ timeout: 60000 }) } catch (e) {
     const out = await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const q = r.result.transaction('outbox').objectStore('outbox').getAll(); q.onsuccess = () => res(q.result.map((x) => [x.table, x.attempts, x.lastError])) } }))
@@ -59,6 +60,8 @@ async function device(browser, catalog) {
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
   const W = p.getByRole('region', { name: '洗衣機現場檢查' })
   check(await until(async () => (await W.getByTestId('washer-score').count()) === 1), '場勘頁出現「洗衣機現場檢查」')
+  check(await W.locator('[data-field]').count() === 0, '詳細欄位預設收起')
+  await expand(W)
   check(await until(async () => (await W.locator('[data-finding="install:dims"]').count()) === 1), '陽台尚未量尺寸 → 必須人工確認')
   check(await until(async () => (await W.locator('[data-finding="fields:missing"][data-level="confirm"]').count()) === 1), '必要欄位未填 → 必須人工確認')
   check((await W.locator('#washer-install-area').inputValue()) !== '', '預設安裝位置為陽台')
@@ -122,6 +125,7 @@ async function device(browser, catalog) {
   const b = await device(browser, catalog); const q = b.page
   await q.getByText(name, { exact: true }).first().click({ timeout: 30000 }); await q.getByRole('heading', { name, exact: true }).waitFor()
   const W2 = q.getByRole('region', { name: '洗衣機現場檢查' })
+  await expand(W2)
   check(await until(async () => (await W2.locator('input[data-field="front_clearance_cm"]').inputValue().catch(() => '')) === '60', 30000), '另一台裝置同步看到欄位值')
   check(await until(async () => (await W2.locator('[data-shot="space_front"]').getAttribute('data-done').catch(() => '')) === '1', 30000), '另一台裝置看到拍攝清單已完成項目')
   const f1 = await W.locator('[data-finding]').evaluateAll((e) => e.map((x) => x.dataset.finding).join(','))

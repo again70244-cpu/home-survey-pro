@@ -9,6 +9,7 @@ const S = process.argv[2]; const URL = 'http://localhost:4174/'
 const FX = JSON.parse(fs.readFileSync(S + '/p2/fixtures.json', 'utf8'))
 let ok = 0, bad = 0; const check = (c, m) => { c ? ok++ : bad++; console.log(c ? '✅' : '❌', m) }
 const until = async (fn, ms = 10000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 200)) } return false }
+const expand = async (R) => { const b = R.getByRole('button', { name: /展開全部欄位/ }); await until(async () => (await b.count()) === 1, 15000); await b.click() }
 const synced = async (p) => {
   try { await p.getByText(/^雲端已同步・/).first().waitFor({ timeout: 60000 }) } catch (e) {
     const out = await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const q = r.result.transaction('outbox').objectStore('outbox').getAll(); q.onsuccess = () => res(q.result.map((x) => [x.table, x.attempts, x.lastError])) } }))
@@ -59,6 +60,7 @@ async function device(browser, catalog) {
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
   const W = p.getByRole('region', { name: '洗衣機現場檢查' })
   await until(async () => (await W.getByTestId('washer-score').count()) === 1)
+  await expand(W)
   const dim = async (area, k, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth(k); await i.fill(String(v)); await i.blur() }
   await dim('陽台', 0, 62); await dim('陽台', 1, 80); await dim('陽台', 2, 200)
   const choose = async (f, v) => { await W.locator(`[data-field="${f}"][data-value="${v}"]`).click(); await p.waitForTimeout(150) }
