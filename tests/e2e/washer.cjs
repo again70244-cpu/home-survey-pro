@@ -96,6 +96,8 @@ async function device(browser, catalog) {
   check((await light('power')) === 'high' && (await light('door')) === 'high' && (await light('space')) === 'caution' && (await light('water')) === 'confirm', '燈號：電源、門片紅燈；空間橘燈；進水待確認')
   check((await W.getByTestId('washer-verdict').getAttribute('data-state')) === 'high', '一行結論顯示高風險')
   check(await W.locator('[data-bar="width_cm"][data-state="caution"]').count() === 1 && await W.locator('[data-bar="depth_cm"][data-state="ok"]').count() === 1, '空間比對圖：寬度不足（橘）、深度足夠')
+  check((await W.getByTestId('light-legend').innerText()).replace(/\s+/g, '') === '高風險注意待確認正常未填點選燈號查看說明', '燈號下方有圖例說明每種狀態')
+  check((await W.locator('[data-light="power"]').innerText()).includes('高風險') && (await W.locator('[data-bar="width_cm"]').innerText()).includes('預留不足') && (await W.locator('[data-bar="depth_cm"]').innerText()).includes('足夠'), '每格與每條比對都寫出狀態文字')
   check(!(await W.locator('[data-finding="outlet:len:WD-S13VDW"]').isVisible()), '未點選前不顯示文字說明')
   await W.locator('[data-light="power"]').click()
   check(await W.locator('[data-finding="outlet:len:WD-S13VDW"]').isVisible() && !(await W.locator('[data-finding="install:width"]').isVisible()), '點「電源」只顯示電源相關說明')

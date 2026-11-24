@@ -18,6 +18,7 @@ const DOT: Record<LightState, string> = {
   ok: 'bg-[#4ade80] shadow-[0_0_14px_rgb(74_222_128/0.75)]',
 }
 const TEXT: Record<LightState, string> = { high: 'text-[#ff8a8a]', caution: 'text-[#f6c27a]', confirm: 'text-[#c4b5fd]', todo: 'text-sub', ok: 'text-[#86efac]' }
+const BAR_LABEL: Record<LightState, string> = { high: '放不下', caution: '預留不足', ok: '足夠', todo: '未量', confirm: '待確認' }
 const ITEM: Record<Finding['level'], string> = {
   high: 'border-[#ff5d5d]/30 bg-[#ff5d5d]/10',
   caution: 'border-[#f5b04a]/30 bg-[#f5b04a]/10',
@@ -59,7 +60,8 @@ function SpaceBars({ def, products, area, stacked }: { def: TemplateDef; product
             <div className="flex items-baseline justify-between text-[13px]">
               <span className="text-ink">{r.label}</span>
               <span className={`tabular-nums ${TEXT[state]}`}>
-                {r.space === null ? '未量' : `${r.space}`} <span className="text-sub">/ 需 {Math.round(need * 10) / 10} cm</span>
+                <b className="font-medium">{BAR_LABEL[state]}</b>
+                <span className="ml-2 text-sub">{r.space === null ? '—' : r.space} / 需 {Math.round(need * 10) / 10} cm</span>
               </span>
             </div>
             <div className="relative mt-1.5 h-3 overflow-visible rounded-full bg-white/[0.06]">
@@ -102,11 +104,11 @@ export function CheckBoard({
       <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3" data-testid={`${def.id}-verdict`} data-state={v.state}>
         <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${DOT[v.state]}`} aria-hidden />
         <span className={`flex-1 text-[16px] ${TEXT[v.state]}`}>{v.text}</span>
-        <span className="flex gap-2 text-[12px] tabular-nums text-sub" aria-label="檢查結果統計">
-          <span>高 <b className="font-medium text-ink" data-count="high">{result.counts.high}</b></span>
-          <span>確 <b className="font-medium text-ink" data-count="confirm">{result.counts.confirm}</b></span>
-          <span>注 <b className="font-medium text-ink" data-count="caution">{result.counts.caution}</b></span>
-        </span>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-1 text-[13px] tabular-nums" aria-label="檢查結果統計">
+        <span className="text-[#ff8a8a]">高風險 <b className="font-medium" data-count="high">{result.counts.high}</b> 項</span>
+        <span className="text-[#f6c27a]">注意 <b className="font-medium" data-count="caution">{result.counts.caution}</b> 項</span>
+        <span className="text-[#c4b5fd]">待確認 <b className="font-medium" data-count="confirm">{result.counts.confirm}</b> 項</span>
       </div>
 
       {/* 燈號格 */}
@@ -131,6 +133,17 @@ export function CheckBoard({
             </button>
           )
         })}
+      </div>
+
+      {/* 圖例：每種燈號代表的狀態 */}
+      <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-[12px] text-sub" aria-label="燈號說明" data-testid="light-legend">
+        {(['high', 'caution', 'confirm', 'ok', 'todo'] as const).map((st) => (
+          <span key={st} className="flex items-center gap-1.5">
+            <span className={`h-2.5 w-2.5 rounded-full ${DOT[st]}`} aria-hidden />
+            {LIGHT_LABEL[st]}
+          </span>
+        ))}
+        <span className="w-full text-center text-[11px]">點選燈號查看說明</span>
       </div>
 
       {/* 選取類別的說明（全部結果都在結構中，依等級排序；只顯示選取的類別） */}
