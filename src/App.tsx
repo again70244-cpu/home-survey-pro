@@ -30,6 +30,7 @@ function ScrollToTop() {
 
 function AppRoutes() {
   const { loading, session, recovery } = useAuth()
+  const { pathname } = useLocation() // 換頁淡入用（HashRouter 的路徑，不是 window.location）
   const userId = session?.user.id
   useEffect(() => (userId ? startSync(userId) : undefined), [userId])
   useEffect(() => (userId ? startCatalogSync() : undefined), [userId])
@@ -49,6 +50,7 @@ function AppRoutes() {
     )
 
   return (
+    <div key={pathname} className="hsp-page">
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/survey/new" element={<SurveyFormPage />} />
@@ -64,6 +66,7 @@ function AppRoutes() {
       <Route path="/catalog/:productId" element={<CatalogProductPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </div>
   )
 }
 

@@ -125,7 +125,7 @@ export function CheckBoard({
               data-light={l.group.key}
               data-state={l.state}
               onClick={() => setSel(on ? null : l.group.key)}
-              style={{ animationDelay: `${i * 40}ms` }}
+              style={{ animationDelay: `${i * 90}ms` }}
               className={`hsp-tile flex flex-col items-center gap-1.5 rounded-2xl border px-1 py-2.5 transition ${on ? 'border-accent/60 bg-white/[0.1]' : 'border-white/10 bg-white/[0.04] active:bg-white/[0.08]'}`}
             >
               <span className={`h-3.5 w-3.5 rounded-full ${DOT[l.state]} ${l.state === 'high' ? 'hsp-breathe' : ''}`} aria-hidden />

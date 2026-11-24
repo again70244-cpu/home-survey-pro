@@ -255,7 +255,7 @@ export function FieldPage() {
             data-step-state={i === idx ? 'current' : statuses[i]?.done ? 'done' : 'todo'}
             className="flex h-5 items-center"
           >
-            <span className={`block h-1 w-full rounded-full transition-[background-color,box-shadow] duration-300 ${statuses[i]?.done ? 'bg-accent shadow-[0_0_8px_rgb(103_232_249/0.6)]' : i === idx ? 'bg-ink/60' : 'bg-white/[0.12]'}`} />
+            <span className={`block h-1 w-full rounded-full transition-[background-color,box-shadow] duration-700 ease-[cubic-bezier(.45,0,.55,1)] ${statuses[i]?.done ? 'bg-accent shadow-[0_0_8px_rgb(103_232_249/0.6)]' : i === idx ? 'bg-ink/60' : 'bg-white/[0.12]'}`} />
           </button>
         ))}
       </div>
@@ -279,7 +279,7 @@ export function FieldPage() {
           <div className="px-1.5 py-2 text-center">
             <div className="relative mx-auto h-16 w-16" aria-hidden>
               <span className="hsp-burst absolute inset-0 rounded-full bg-[radial-gradient(circle,rgb(103_232_249/0.55),transparent_70%)]" />
-              <div className="hsp-pop-in absolute inset-0 flex items-center justify-center rounded-full bg-accent text-canvas shadow-[0_0_30px_rgb(103_232_249/0.45)]">
+              <div className="hsp-pop-in absolute inset-0 flex items-center justify-center rounded-full bg-accent text-canvas shadow-[0_0_30px_rgb(103_232_249/0.45)]"><div className="hsp-glow-breathe absolute inset-0 rounded-full" />
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path className="hsp-draw" d="M5 12l5 5 9-10" /></svg>
               </div>
             </div>

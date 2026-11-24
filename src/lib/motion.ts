@@ -19,7 +19,7 @@ export function initPressFeedback() {
       dot.style.top = `${e.clientY - r.top}px`
       el.appendChild(dot)
       dot.addEventListener('animationend', () => dot.remove(), { once: true })
-      window.setTimeout(() => dot.remove(), 800) // 動畫事件沒觸發時的保險
+      window.setTimeout(() => dot.remove(), 1500) // 動畫事件沒觸發時的保險
       if (el.classList.contains('glass-dark')) {
         el.classList.remove('hsp-glow')
         void el.offsetWidth // 重新觸發動畫

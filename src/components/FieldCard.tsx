@@ -31,7 +31,7 @@ function FieldCard({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
           <circle
             cx="34" cy="34" r="28" fill="none" stroke="#67e8f9" strokeWidth="6" strokeLinecap="round"
             strokeDasharray={RING} strokeDashoffset={RING * (1 - done / total)} transform="rotate(-90 34 34)"
-            style={{ transition: 'stroke-dashoffset 500ms cubic-bezier(.2,.8,.2,1)', filter: 'drop-shadow(0 0 6px rgb(103 232 249 / 0.7))', opacity: done ? 1 : 0 }}
+            style={{ transition: 'stroke-dashoffset 1100ms cubic-bezier(.45,0,.55,1)', filter: 'drop-shadow(0 0 6px rgb(103 232 249 / 0.7))', opacity: done ? 1 : 0 }}
           />
           <text x="34" y="39" textAnchor="middle" fill="currentColor" fontSize="15" fontWeight="500">{done}/{total}</text>
         </svg>
@@ -44,7 +44,7 @@ function FieldCard({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
       <button
         type="button"
         onClick={() => nav(`/survey/${surveyId}/field/${def.id}?step=${next ? nextIdx : 'done'}`)}
-        className="glass-dark mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-full text-[17px] tracking-[0.06em]"
+        className={`glass-dark mt-4 flex h-[58px] w-full items-center justify-center gap-2.5 rounded-full text-[17px] tracking-[0.06em] ${next ? 'hsp-breathe-soft' : ''}`}
       >
         {Icon.camera}
         {done === 0 ? '開始現場拍攝' : next ? '繼續現場拍攝' : '檢視現場拍攝'}

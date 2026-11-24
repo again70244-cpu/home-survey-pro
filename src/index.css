@@ -123,67 +123,91 @@ input, textarea, select { font-size: 16px; } /* 避免 iOS 聚焦時自動放大
 .glass:active, .glass-dark:active { transform: scale(0.98); }
 
 /* ---------------------------------------------------------------------------
- * 動畫（全部 120～500ms，只用位移／縮放／透明度；系統開啟「減少動態效果」時全部停用）
+ * 動畫：有節奏、像呼吸一樣（緩入緩出＋淡入淡出），不是急停的快動作
+ *   --hsp-out     進場：慢慢減速停下
+ *   --hsp-breathe 呼吸：慢慢開始、慢慢結束
+ * 只用位移／縮放／透明度；系統開啟「減少動態效果」時全部停用
  * ------------------------------------------------------------------------- */
+:root {
+  --hsp-out: cubic-bezier(.22, 1, .36, 1);
+  --hsp-breathe: cubic-bezier(.45, 0, .55, 1);
+}
 button.glass, a.glass, button.glass-dark, a.glass-dark { position: relative; overflow: hidden; isolation: isolate; }
-.glass, .glass-dark { transition: transform 100ms ease-out, box-shadow 200ms ease-out, background-color 200ms, color 200ms; }
-.glass:active, .glass-dark:active { transform: scale(0.96); }
+.glass, .glass-dark { transition: transform 420ms var(--hsp-out), box-shadow 600ms var(--hsp-breathe), background-color 500ms var(--hsp-breathe), color 500ms var(--hsp-breathe), opacity 400ms var(--hsp-breathe); }
+.glass:active, .glass-dark:active { transform: scale(0.97); transition-duration: 220ms; }
 
-/* 點擊光波（由 lib/motion.ts 產生） */
-.hsp-ripple { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 9999px; pointer-events: none; z-index: -1; animation: hsp-ripple 450ms ease-out forwards; }
-.glass-dark .hsp-ripple { background: rgb(103 232 249 / 0.55); }
-.glass .hsp-ripple { background: rgb(255 255 255 / 0.28); }
-@keyframes hsp-ripple { from { transform: scale(0); opacity: 0.9; } to { transform: scale(18); opacity: 0; } }
-.glass-dark.hsp-glow { animation: hsp-glow 450ms ease-out; }
-@keyframes hsp-glow { 35% { box-shadow: 0 0 0 6px rgb(103 232 249 / 0.35), 0 10px 44px rgb(103 232 249 / 0.55), inset 0 1px 0 #fff; } }
+/* 點擊光波：慢慢擴散、慢慢淡去（由 lib/motion.ts 產生） */
+.hsp-ripple { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 9999px; pointer-events: none; z-index: -1; animation: hsp-ripple 1100ms var(--hsp-out) forwards; }
+.glass-dark .hsp-ripple { background: rgb(103 232 249 / 0.45); }
+.glass .hsp-ripple { background: rgb(255 255 255 / 0.22); }
+@keyframes hsp-ripple { from { transform: scale(0); opacity: 0.7; } 40% { opacity: 0.45; } to { transform: scale(16); opacity: 0; } }
+/* 主要按鈕：外框亮起再慢慢暗下 */
+.glass-dark.hsp-glow { animation: hsp-glow 1100ms var(--hsp-breathe); }
+@keyframes hsp-glow { 40% { box-shadow: 0 0 0 6px rgb(103 232 249 / 0.3), 0 10px 48px rgb(103 232 249 / 0.55), inset 0 1px 0 #fff; } }
 
-/* 選項選中：輕彈一下 */
-.glass-dark[aria-checked="true"], .glass-dark[aria-selected="true"], .glass-dark[aria-pressed="true"] { animation: hsp-pop 220ms cubic-bezier(.2, .8, .2, 1.4); }
-@keyframes hsp-pop { 50% { transform: scale(1.06); } }
+/* 呼吸燈：主要行動按鈕外圈慢慢亮、慢慢暗（3.2 秒一個循環） */
+.hsp-breathe-soft { animation: hsp-breathe-soft 3.2s var(--hsp-breathe) infinite; }
+@keyframes hsp-breathe-soft {
+  0%, 100% { box-shadow: 0 0 0 1px rgb(103 232 249 / 0.22), 0 10px 30px rgb(103 232 249 / 0.18), inset 0 1px 0 #fff; }
+  50% { box-shadow: 0 0 0 4px rgb(103 232 249 / 0.28), 0 12px 46px rgb(103 232 249 / 0.48), inset 0 1px 0 #fff; }
+}
+
+/* 選項選中：亮起並淡入（不彈跳） */
+.glass-dark[aria-checked="true"], .glass-dark[aria-selected="true"], .glass-dark[aria-pressed="true"] { animation: hsp-select 520ms var(--hsp-out); }
+@keyframes hsp-select { from { opacity: 0.55; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* 換頁：內容柔和浮現 */
+.hsp-page { animation: hsp-page 620ms var(--hsp-out); }
+@keyframes hsp-page { from { opacity: 0; } to { opacity: 1; } } /* 只淡入不位移：位移會讓固定在底部的按鈕列跳動 */
 
 /* 展開的內容：淡入並往下滑開 */
-.hsp-reveal { animation: hsp-reveal 260ms cubic-bezier(.2, .8, .2, 1); }
-@keyframes hsp-reveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.hsp-reveal { animation: hsp-reveal 560ms var(--hsp-out); }
+@keyframes hsp-reveal { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
 
-/* 換步驟：由右（下一步）或由左（上一步）滑入 */
-.hsp-in-r { animation: hsp-in-r 260ms cubic-bezier(.2, .8, .2, 1); }
-.hsp-in-l { animation: hsp-in-l 260ms cubic-bezier(.2, .8, .2, 1); }
-@keyframes hsp-in-r { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
-@keyframes hsp-in-l { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+/* 換步驟：一邊淡入一邊由右（下一步）或由左（上一步）滑入 */
+.hsp-in-r { animation: hsp-in-r 640ms var(--hsp-out); }
+.hsp-in-l { animation: hsp-in-l 640ms var(--hsp-out); }
+@keyframes hsp-in-r { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: none; } }
+@keyframes hsp-in-l { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
 
-/* 彈入（照片縮圖、完成圖示） */
-.hsp-pop-in { animation: hsp-pop-in 360ms cubic-bezier(.2, .8, .2, 1.3) both; }
-@keyframes hsp-pop-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
-/* 勾勾線條畫出 */
-.hsp-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: hsp-draw 360ms ease-out 260ms forwards; }
+/* 浮現（照片縮圖、完成圖示）：淡入並微微放大 */
+.hsp-pop-in { animation: hsp-pop-in 700ms var(--hsp-out) both; }
+@keyframes hsp-pop-in { from { opacity: 0; transform: scale(0.82); } to { opacity: 1; transform: none; } }
+/* 勾勾線條慢慢畫出 */
+.hsp-draw { stroke-dasharray: 30; stroke-dashoffset: 30; animation: hsp-draw 800ms var(--hsp-breathe) 500ms forwards; }
 @keyframes hsp-draw { to { stroke-dashoffset: 0; } }
-/* 光暈擴散 */
-.hsp-burst { animation: hsp-burst 700ms ease-out 200ms both; }
-@keyframes hsp-burst { from { opacity: 0.9; transform: scale(0.6); } to { opacity: 0; transform: scale(2.2); } }
-/* 拍照白光 */
-.hsp-flash { animation: hsp-flash 240ms ease-out forwards; }
-@keyframes hsp-flash { 30% { opacity: 0.85; } to { opacity: 0; } }
+/* 光暈擴散後淡去 */
+.hsp-burst { animation: hsp-burst 1600ms var(--hsp-out) 400ms both; }
+@keyframes hsp-burst { from { opacity: 0.8; transform: scale(0.7); } to { opacity: 0; transform: scale(2.4); } }
+/* 完成圖示：之後持續慢慢呼吸 */
+.hsp-glow-breathe { animation: hsp-glow-breathe 3.2s var(--hsp-breathe) 1.4s infinite; }
+@keyframes hsp-glow-breathe { 50% { box-shadow: 0 0 46px rgb(103 232 249 / 0.7); } }
+/* 拍照：柔和的白光，亮起再慢慢退去 */
+.hsp-flash { animation: hsp-flash 700ms var(--hsp-breathe) forwards; }
+@keyframes hsp-flash { 25% { opacity: 0.6; } to { opacity: 0; } }
 
-/* 燈號依序亮起；高風險燈呼吸 */
-.hsp-tile { animation: hsp-tile 320ms cubic-bezier(.2, .8, .2, 1) both; }
-@keyframes hsp-tile { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
-.hsp-breathe { animation: hsp-breathe 2s ease-in-out infinite; }
-@keyframes hsp-breathe { 50% { transform: scale(1.18); box-shadow: 0 0 22px rgb(255 93 93); } }
+/* 燈號：依序淡入亮起；高風險燈像呼吸燈一樣慢慢亮暗 */
+.hsp-tile { animation: hsp-tile 700ms var(--hsp-out) both; }
+@keyframes hsp-tile { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
+.hsp-breathe { animation: hsp-breathe 3.2s var(--hsp-breathe) infinite; }
+@keyframes hsp-breathe { 0%, 100% { opacity: 0.75; box-shadow: 0 0 6px rgb(255 93 93 / 0.5); } 50% { opacity: 1; transform: scale(1.12); box-shadow: 0 0 24px rgb(255 93 93 / 0.95); } }
 
-/* 提示訊息：由下滑入 */
-.hsp-toast { animation: hsp-toast 300ms cubic-bezier(.2, .8, .2, 1); }
-@keyframes hsp-toast { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
-/* 「已儲存」浮出後淡出 */
-.hsp-saved { animation: hsp-saved 1200ms ease-out forwards; }
-@keyframes hsp-saved { from { opacity: 0; transform: translateY(4px); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; } to { opacity: 0; } }
-/* 輸入框聚焦：冰藍光 */
-.hsp-focus { transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms; }
-.hsp-focus:focus-within { border-color: rgb(103 232 249 / 0.8) !important; box-shadow: 0 0 0 4px rgb(103 232 249 / 0.15), 0 0 24px rgb(103 232 249 / 0.25); }
-/* 同步中轉圈 */
-.hsp-spin { animation: hsp-spin 900ms linear infinite; }
+/* 提示訊息：淡入浮上，停留後淡出（由 Toast 切換 class） */
+.hsp-toast { animation: hsp-toast 600ms var(--hsp-out) both; }
+@keyframes hsp-toast { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+.hsp-toast-out { animation: hsp-toast-out 700ms var(--hsp-breathe) forwards; }
+@keyframes hsp-toast-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px); } }
+/* 「已儲存」淡入、停留、淡出 */
+.hsp-saved { animation: hsp-saved 2200ms var(--hsp-breathe) forwards; }
+@keyframes hsp-saved { from { opacity: 0; transform: translateY(4px); } 20% { opacity: 1; transform: none; } 75% { opacity: 1; } to { opacity: 0; } }
+/* 輸入框聚焦：冰藍光慢慢亮起 */
+.hsp-focus { transition: border-color 450ms var(--hsp-breathe), box-shadow 600ms var(--hsp-breathe), background-color 450ms var(--hsp-breathe); }
+.hsp-focus:focus-within { border-color: rgb(103 232 249 / 0.8) !important; box-shadow: 0 0 0 4px rgb(103 232 249 / 0.15), 0 0 26px rgb(103 232 249 / 0.25); }
+/* 同步中：平穩轉圈 */
+.hsp-spin { animation: hsp-spin 1.6s linear infinite; }
 @keyframes hsp-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   .hsp-ripple { display: none; }
 }
