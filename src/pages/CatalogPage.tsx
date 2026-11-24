@@ -12,11 +12,25 @@ function QualityTag({ q }: { q: CatalogProduct['data_quality'] }) {
   return <span className={`text-xs ${cls}`}>{q === 'complete' ? '✓ ' : ''}{QUALITY_LABEL[q]}</span>
 }
 
-/** 產品縮圖：外部圖片載入失敗（例如離線且未快取）時顯示佔位 */
+/**
+ * 產品縮圖：以 CORS 載入（快取才能判斷是否成功）；失敗時自動重試一次（imgbb 偶爾逾時），
+ * 再失敗才顯示佔位（例如離線且未快取）
+ */
 export function ProductImage({ url, className = '' }: { url?: string; className?: string }) {
-  const [bad, setBad] = useState(false)
-  if (!url || bad) return <div className={`flex items-center justify-center bg-sand text-[10px] text-sub ${className}`}>無圖片</div>
-  return <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBad(true)} className={`bg-white object-contain ${className}`} />
+  const [tries, setTries] = useState(0)
+  if (!url || tries > 1) return <div className={`flex items-center justify-center bg-sand text-[10px] text-sub ${className}`}>無圖片</div>
+  return (
+    <img
+      key={tries}
+      src={tries ? `${url}${url.includes('?') ? '&' : '?'}retry=1` : url}
+      alt=""
+      loading="lazy"
+      crossOrigin="anonymous"
+      referrerPolicy="no-referrer"
+      onError={() => setTimeout(() => setTries((t) => t + 1), tries ? 0 : 1500)}
+      className={`bg-white object-contain ${className}`}
+    />
+  )
 }
 
 function SyncStatus({ products }: { products: CatalogProduct[] }) {

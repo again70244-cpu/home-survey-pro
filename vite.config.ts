@@ -41,9 +41,11 @@ export default defineConfig({
         runtimeCaching: [
           {
             // 產品圖片（Google Sheets 中的圖片網址）：看過一次即可離線顯示
+            // 圖片以 CORS 方式載入（imgbb 允許），只快取確定成功（200）的回應；
+            // 不快取 status 0（看不到真實狀態，曾把 imgbb 逾時時的錯誤圖存起來一直顯示）
             urlPattern: /^https:\/\/i\.ibb\.co\/.*/i,
             handler: 'CacheFirst',
-            options: { cacheName: 'product-images', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 }, cacheableResponse: { statuses: [0, 200] } },
+            options: { cacheName: 'product-images-v2', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 60 }, cacheableResponse: { statuses: [200] } },
           },
           {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,

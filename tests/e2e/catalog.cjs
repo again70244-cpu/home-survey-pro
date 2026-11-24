@@ -10,7 +10,7 @@ const seen = (p, t, n = 15000) => p.getByText(t).first().waitFor({ timeout: n })
   await ctx.route('**/rest/v1/catalog_sync_runs*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(state.runs) }));
   await ctx.route('**/rest/v1/catalog_products*', (r) => state.fail ? r.fulfill({ status: 500, body: '{}' }) : r.fulfill({ contentType: 'application/json', body: JSON.stringify(FX.products) }));
   await ctx.route('**/rest/v1/catalog_multi_split_systems*', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(FX.systems) }));
-  await ctx.route('https://i.ibb.co/**', (r) => r.fulfill({ contentType: 'image/png', body: fs.readFileSync(require('path').join(__dirname, '../../public/icon-192.png')) }));
+  await ctx.route('https://i.ibb.co/**', (r) => r.fulfill({ contentType: 'image/png', body: fs.readFileSync(require('path').join(__dirname, '../../public/icon-192.png')), headers: { 'access-control-allow-origin': '*' } }));
   const p = await ctx.newPage(); p.on('pageerror', (e) => console.log('[JS error]', e.message));
   await p.goto(URL); await p.getByLabel('Email').fill('hsp-test-a@example.com'); await p.getByLabel('密碼').fill(process.env.HSP_TEST_A_PW);
   await p.getByRole('button', { name: '登入' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor({ timeout: 20000 });
