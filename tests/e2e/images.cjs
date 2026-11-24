@@ -24,10 +24,16 @@ const imgs = (p) => p.locator('main img').evaluateAll((es) => es.map((e) => ({ s
   console.log('— imgbb 逾時：自動重試後正常顯示（不經過 Service Worker）')
   {
     const ctx = await browser.newContext({ ...devices['Pixel 7'], serviceWorkers: 'block' })
-    let failed = 0
-    await ctx.route('https://i.ibb.co/xtshnSJk/**', (r) => (failed++ === 0 ? r.fulfill({ status: 504, contentType: 'text/html', body: '<html>504 Gateway Time-out</html>' }) : r.continue()))
+    // 不寫死圖片網址（試算表可能換圖）：讓第一張 imgbb 圖片的第一次請求回應 504
+    let target = null, failed = 0
+    await ctx.route('https://i.ibb.co/**', (r) => {
+      const id = r.request().url().split('/')[3]
+      if (!target) target = id
+      if (id !== target) return r.continue()
+      return failed++ === 0 ? r.fulfill({ status: 504, contentType: 'text/html', body: '<html>504 Gateway Time-out</html>' }) : r.continue()
+    })
     const p = await ctx.newPage(); await login(p); await openProduct(p, 'WD-S2220B')
-    check(await until(async () => (await imgs(p)).some((i) => i.src.includes('xtshnSJk') && i.w === 1339), 90000), '第一次 504，重試後顯示正常圖片（1339 px 寬）')
+    check(await until(async () => !!target && (await imgs(p)).some((i) => i.src.includes(target) && i.w > 0), 90000), `第一次 504，重試後顯示正常圖片（${target}）`)
     check(failed >= 2, `確實重試了（請求 ${failed} 次）`)
     await ctx.close()
   }
@@ -38,7 +44,7 @@ const imgs = (p) => p.locator('main img').evaluateAll((es) => es.map((e) => ({ s
     const p = await ctx.newPage(); await login(p)
     await until(async () => p.evaluate(() => !!navigator.serviceWorker.controller), 30000) || (await p.reload(), await until(async () => p.evaluate(() => !!navigator.serviceWorker.controller), 30000))
     // 模擬舊版：舊快取裡存了一張錯誤圖
-    await p.evaluate(async () => { const c = await caches.open('product-images'); await c.put('https://i.ibb.co/xtshnSJk/LG-AI-WD-S2220-B.png', new Response('<html>504</html>', { headers: { 'content-type': 'text/html' } })) })
+    await p.evaluate(async () => { const c = await caches.open('product-images'); await c.put('https://i.ibb.co/example/old.png', new Response('<html>504</html>', { headers: { 'content-type': 'text/html' } })) })
     check(await p.evaluate(() => caches.has('product-images')), '（模擬）舊快取存在')
     await p.reload(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor({ timeout: 30000 })
     check(await until(async () => !(await p.evaluate(() => caches.has('product-images')))), '開啟 App 後自動刪除舊快取')
