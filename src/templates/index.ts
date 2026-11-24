@@ -9,6 +9,18 @@ import { WASHER_SECTIONS, WASHER_SHOTS, WASHER_TEMPLATE_ID, WASHER_TEMPLATE_VERS
 import { FRIDGE_STEPS, WASHER_STEPS, type FieldStep } from './steps'
 import { FRIDGE_SECTIONS, FRIDGE_SHOTS, FRIDGE_TEMPLATE_ID, FRIDGE_TEMPLATE_VERSION, isFridgeCategory } from './fridge'
 
+/** 燈號格：把檢查結果依類別歸類（未歸類的放在「資料」） */
+export interface LightGroup {
+  key: string
+  label: string
+  /** 這個類別包含哪些檢查結果 */
+  match: (findingId: string) => boolean
+  /** 對應的現場拍攝步驟：步驟未完成時燈號顯示「未填」 */
+  steps: string[]
+}
+const starts = (...ps: string[]) => (id: string) => ps.some((p) => id === p || id.startsWith(p.endsWith(':') ? p : `${p}:`))
+const DATA_GROUP: LightGroup = { key: 'data', label: '資料', match: starts('product:', 'spec:', 'fields:', 'shots:', 'manual:', 'unit:'), steps: [] }
+
 export interface TemplateDef {
   id: string
   version: number
@@ -27,6 +39,10 @@ export interface TemplateDef {
   check: (input: RuleInput) => CheckResult
   /** 現場拍攝模式的步驟（先量測，再拍照） */
   steps: FieldStep[]
+  /** 檢查結果燈號格（最後一格固定為「資料」） */
+  lights: LightGroup[]
+  /** 預留空間標準（公分），空間比對圖使用 */
+  clearance: { side_each_cm: number; back_cm: number; top_cm: number }
   /** 找不到安裝位置時，提供一鍵新增的區域名稱 */
   installAreaName?: string
   /** 拍攝項目要存到哪個區域 */
@@ -46,6 +62,17 @@ export const WASHER: TemplateDef = {
   sections: WASHER_SECTIONS,
   shots: WASHER_SHOTS,
   steps: WASHER_STEPS,
+  lights: [
+    { key: 'space', label: '空間', match: starts('install:', 'stack:'), steps: ['install'] },
+    { key: 'door', label: '門片', match: starts('door:'), steps: ['front'] },
+    { key: 'water', label: '進水', match: starts('faucet:'), steps: ['faucet'] },
+    { key: 'drain', label: '排水', match: starts('drain:'), steps: ['drain'] },
+    { key: 'power', label: '電源', match: starts('outlet:'), steps: ['outlet'] },
+    { key: 'floor', label: '地面', match: starts('floor', 'top'), steps: ['floor'] },
+    { key: 'route', label: '搬運', match: starts('route:'), steps: ['door', 'passage'] },
+    DATA_GROUP,
+  ],
+  clearance: { side_each_cm: 2, back_cm: 10, top_cm: 0 },
   showIf: {
     faucet_distance_cm: (v) => v.faucet === 'yes',
     drain_distance_cm: (v) => v.drain_type === 'floor' || v.drain_type === 'wall',
@@ -70,6 +97,16 @@ export const FRIDGE: TemplateDef = {
   sections: FRIDGE_SECTIONS,
   shots: FRIDGE_SHOTS,
   steps: FRIDGE_STEPS,
+  lights: [
+    { key: 'space', label: '空間', match: starts('install:', 'door:width'), steps: ['install'] },
+    { key: 'door', label: '門片', match: (id) => id.startsWith('door:') && !id.startsWith('door:width'), steps: ['front'] },
+    { key: 'power', label: '電源', match: starts('outlet:'), steps: ['outlet'] },
+    { key: 'water', label: '進水', match: starts('water:'), steps: ['water'] },
+    { key: 'env', label: '環境', match: starts('floor', 'heat'), steps: ['floor'] },
+    { key: 'route', label: '搬運', match: starts('route:'), steps: ['door', 'passage'] },
+    DATA_GROUP,
+  ],
+  clearance: { side_each_cm: 5, back_cm: 5, top_cm: 5 },
   showIf: {
     outlet_distance_cm: (v) => v.outlet === 'yes',
     outlet_grounded: (v) => v.outlet === 'yes',

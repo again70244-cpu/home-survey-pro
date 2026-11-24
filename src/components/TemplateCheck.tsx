@@ -7,6 +7,8 @@ import type { ShotItem, TemplateField } from '../templates/washer'
 import { matchingProducts, TEMPLATES, type TemplateDef } from '../templates'
 import { RISK_LABEL, type CheckResult, type Finding, type RiskLevel } from '../rules/types'
 import { Button, Icon } from './ui'
+import { CheckBoard } from './CheckBoard'
+import { allStepStatus } from '../pages/FieldPage'
 import { useToast } from './Toast'
 
 export const LEVEL_STYLE: Record<RiskLevel, string> = {
@@ -34,7 +36,7 @@ export async function loadTemplateCheck(def: TemplateDef, surveyId: string, id: 
   const values = activeTpl?.values ?? {}
   const installAreaId = activeTpl?.install_area_id ?? null
   const result = active ? def.check({ values, installAreaId, areas, products: live, shotsTaken }) : null
-  return { active, values, installAreaId, areas, shotsTaken, result, installArea: def.pickArea(areas, installAreaId), hasProduct }
+  return { active, values, installAreaId, areas, shotsTaken, result, installArea: def.pickArea(areas, installAreaId), hasProduct, products: live }
 }
 
 function ChoiceField({ f, value, onChange }: { f: TemplateField; value: unknown; onChange: (v: string | null) => void }) {
@@ -137,7 +139,6 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
   const fileRef = useRef<HTMLInputElement>(null)
   const pendingShot = useRef<ShotItem | null>(null)
   const [busy, setBusy] = useState(false)
-  const [showAll, setShowAll] = useState(false)
   // 詳細欄位與拍攝清單預設收起（現場請用「現場拍攝」一步一步填）
   const [expanded, setExpanded] = useState(false)
   if (!data) return null
@@ -175,9 +176,8 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
     }
   }
 
-  const findings = r!.findings
+  const stepStates = allStepStatus(def, data as never)
   const shots = def.shots.filter((s) => s.when?.(v) ?? true)
-  const visible = showAll ? findings : findings.filter((f) => f.level !== 'info')
   return (
     <section className="glass-card my-3 p-5" aria-label={def.title}>
       <div className="flex items-baseline justify-between">
@@ -186,21 +186,15 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
       </div>
       {!data.hasProduct && <p className="mt-2 text-xs text-sub">{def.noProductHint}</p>}
 
-      {/* 檢查結果 */}
-      <div className="mt-3">
-        <ResultSummary r={r!} />
-        {visible.length > 0 ? (
-          <ul className="mt-3 space-y-2" aria-label="檢查結果">{visible.map((f) => <FindingItem key={f.id} f={f} />)}</ul>
-        ) : (
-          <p className="mt-3 bg-sand px-3 py-3 text-sm text-ink">{findings.length ? '沒有需要注意的項目' : '目前沒有發現問題'}</p>
-        )}
-        {findings.some((f) => f.level === 'info') && (
-          <button className="mt-2 glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink" onClick={() => setShowAll((x) => !x)}>
-            {showAll ? '隱藏一般提醒' : `顯示一般提醒（${r!.counts.info}）`}
-          </button>
-        )}
-        <p className="mt-2 text-[11px] text-sub">{def.note}・僅供提醒，請以現場判斷為準</p>
-      </div>
+      {/* 檢查結果：燈號儀表板 */}
+      <CheckBoard
+        def={def}
+        result={r!}
+        stepDone={new Map(def.steps.map((st, i) => [st.key, stepStates[i].done]))}
+        products={data.products}
+        installArea={installArea}
+        stacked={v.stacked === 'yes'}
+      />
 
       <button
         type="button"

@@ -9,6 +9,7 @@ const S = process.argv[2]; const URL = 'http://localhost:4174/'
 const FX = JSON.parse(fs.readFileSync(S + '/p2/fixtures.json', 'utf8'))
 let ok = 0, bad = 0; const check = (c, m) => { c ? ok++ : bad++; console.log(c ? '✅' : '❌', m) }
 const until = async (fn, ms = 10000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 200)) } return false }
+const openData = async (R) => { const t = R.locator('[data-light="data"]'); await t.waitFor({ timeout: 15000 }); if ((await t.getAttribute('aria-selected')) !== 'true') await t.click() }
 const synced = async (p) => {
   try { await p.getByText(/^雲端已同步・/).first().waitFor({ timeout: 60000 }) } catch (e) {
     const out = await p.evaluate(() => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const q = r.result.transaction('outbox').objectStore('outbox').getAll(); q.onsuccess = () => res(q.result.map((x) => [x.table, x.attempts, x.lastError])) } }))
@@ -70,11 +71,12 @@ async function device(browser, catalog) {
   await sel(AC).selectOption('fridge')
   check(await until(async () => (await F.getByTestId('fridge-score').count()) === 1), '冷氣指定為冰箱檢查 → 冰箱檢查出現（測試手動指定）')
   check(await until(async () => (await F.locator(`[data-finding="spec:${AC}"][data-level="confirm"]`).count()) === 1), '產品沒有機身尺寸 → 必須人工確認，並建議修正規格')
+  await openData(F)
   check((await F.locator(`[data-finding="spec:${AC}"]`).innerText()).includes('修正規格'), '建議文字提到「修正規格」')
 
   console.log('— 手動修正規格')
   const card = (m) => p.getByRole('listitem', { name: `安裝產品 ${m}` })
-  const showInfo = async (R) => { const b = R.getByRole('button', { name: /^顯示一般提醒/ }); if (await b.count()) await b.click() }
+  const showInfo = openData
   check((await card(AC).innerText()).includes('可按「修正規格」輸入'), '沒有尺寸的產品提示可手動輸入')
   await p.getByRole('button', { name: `修正 ${AC} 規格` }).click()
   const ed = p.getByRole('group', { name: `修正 ${AC} 規格` })
@@ -84,7 +86,7 @@ async function device(browser, catalog) {
   check(await until(async () => (await card(AC).locator('[data-spec="width_cm"][data-manual="1"]').innerText().catch(() => '')).includes('83')), '產品卡片顯示修正後寬 83，並標示「手動」')
   check((await card(AC).getByTestId('manual-note').innerText()).includes('現場實測'), '顯示修正來源')
   check(await until(async () => (await F.locator(`[data-finding="spec:${AC}"]`).count()) === 0), '修正後不再提示缺少尺寸')
-  await until(async () => (await F.getByRole('button', { name: /^顯示一般提醒/ }).count()) === 1); await showInfo(F)
+  await showInfo(F)
   check(await until(async () => (await F.locator(`[data-finding="manual:${AC}"][data-level="info"]`).count()) === 1), '檢查結果標示「部分規格為手動修正」（一般提醒）')
 
   console.log('— 修正值會改變檢查結果（洗衣機寬度）')
