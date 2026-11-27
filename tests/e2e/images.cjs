@@ -56,5 +56,53 @@ const imgs = (p) => p.locator('main img').evaluateAll((es) => es.map((e) => ({ s
     await ctx.close()
   }
 
+  console.log('— App 內看圖：超大圖先縮小、縮放、滑動換圖、返回關閉')
+  {
+    const ctx = await browser.newContext({ ...devices['Pixel 7'] })
+    const p = await ctx.newPage(); await login(p); await openProduct(p, 'WD-S2220B')
+    const thumbs = p.getByRole('button', { name: /放大第 \d+ 張圖片/ })
+    await until(async () => (await thumbs.count()) > 0, 60000)
+    const n = await thumbs.count()
+    const srcs = await p.locator('main img').evaluateAll((es) => es.map((e) => e.getAttribute('src')))
+    check(new Set(srcs).size === srcs.length, `縮圖不重複（${n} 張）`)
+    const url0 = p.url()
+    // 找到最大的那張（4181×7500）
+    const big = srcs.findIndex((u) => /pjnZM1Y8|QjTKM5jg/.test(u || ''))
+    await thumbs.nth(big >= 0 ? big : 0).click()
+    const v = p.getByTestId('image-viewer')
+    check(await v.waitFor({ timeout: 5000 }).then(() => true, () => false), '點縮圖在 App 內開啟看圖（沒有跳到網頁）')
+    check(p.url() === url0 && (await ctx.pages()).length === 1, '沒有開新分頁、網址不變')
+    const vimg = v.locator('img')
+    check(await until(async () => (await vimg.count()) > 0 && (await vimg.evaluate((e) => e.complete && e.naturalWidth > 0)), 90000), '圖片有顯示出來')
+    if (big >= 0) {
+      const info = await vimg.evaluate((e) => ({ w: e.naturalWidth, h: e.naturalHeight, scaled: e.dataset.scaled }))
+      check(info.scaled === '1' && info.w * info.h <= 12e6 && info.w > 2000, `超大圖已縮成手機畫得出的大小：${info.w}×${info.h}`)
+    }
+    const stage = p.getByTestId('viewer-stage'); const box = await stage.boundingBox()
+    const cx = box.x + box.width / 2, cy = box.y + box.height / 2
+    const tap = async () => { await p.mouse.click(cx, cy); await p.waitForTimeout(120); await p.mouse.click(cx, cy) }
+    await tap(); await p.waitForTimeout(600)
+    check(Number(await stage.getAttribute('data-scale')) > 2, '點兩下放大：' + (await stage.getAttribute('data-scale')))
+    // 放大後拖曳不會換圖
+    const c0 = await p.getByTestId('viewer-count').textContent()
+    await p.mouse.move(cx, cy); await p.mouse.down(); await p.mouse.move(cx - 150, cy, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(600)
+    check((await p.getByTestId('viewer-count').textContent()) === c0, '放大時拖曳是移動圖片，不會換圖')
+    await tap(); await p.waitForTimeout(600)
+    check(Number(await stage.getAttribute('data-scale')) === 1, '再點兩下還原')
+    if (n > 1) {
+      const before = await p.getByTestId('viewer-count').textContent()
+      const dir = before.startsWith(String(n)) ? 1 : -1
+      await p.mouse.move(cx, cy); await p.mouse.down(); await p.mouse.move(cx + dir * 160, cy, { steps: 6 }); await p.mouse.up()
+      check(await until(async () => (await p.getByTestId('viewer-count').textContent()) !== before, 3000), `左右滑動換圖：${before} → ${await p.getByTestId('viewer-count').textContent()}`)
+    }
+    await p.goBack()
+    check(await until(async () => (await v.count()) === 0, 3000), '按手機返回鍵：關閉看圖')
+    check(await p.getByRole('button', { name: /放大第 1 張圖片/ }).isVisible(), '關閉後仍停在產品頁')
+    await thumbs.first().click(); await v.waitFor()
+    await p.getByRole('button', { name: '關閉' }).click()
+    check(await until(async () => (await v.count()) === 0, 3000) && p.url() === url0, '按 × 關閉看圖')
+    await ctx.close()
+  }
+
   console.log('\n結果：' + ok + ' 通過，' + bad + ' 失敗'); await browser.close(); process.exit(bad ? 1 : 0)
 })().catch((e) => { console.error('FAIL', e.message.split('\n').slice(0, 6).join('\n')); process.exit(1) })

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { fmtTime, QUALITY_LABEL, SPEC_GROUPS, SPEC_LABELS, specValue, systemsForProduct } from '../catalog/search'
 import type { CatalogProduct } from '../catalog/types'
 import { Icon, IconButton, PageTitle, TopBar } from '../components/ui'
 import { ProductImage } from './CatalogPage'
+import { ImageViewer } from '../components/ImageViewer'
 
 /** 規格表（場勘頁的產品快照也共用） */
 export function SpecTable({ p }: { p: Pick<CatalogProduct, 'install_extra'> & Partial<CatalogProduct> }) {
@@ -59,6 +60,10 @@ export function CatalogProductPage() {
   const { productId } = useParams()
   const nav = useNavigate()
   const [raw, setRaw] = useState(false)
+  const loc = useLocation()
+  /** 看圖開關放在路由 state：手機按「返回」會先關閉看圖 */
+  const viewerAt = (loc.state as { viewer?: number } | null)?.viewer
+  const openViewer = (i: number) => nav(loc.pathname, { state: { viewer: i } })
   const data = useLiveQuery(async () => {
     const p = await db.catalog_products.get(productId!)
     if (!p) return null
@@ -75,6 +80,7 @@ export function CatalogProductPage() {
   const { p, systems } = data
   const issues = p.parse_issues ?? []
   const notes = p.install_extra?.notes ?? []
+  const images = [...new Set(p.image_urls)] // 試算表可能重複填同一張
 
   return (
     <div className="min-h-dvh pb-12">
@@ -88,12 +94,12 @@ export function CatalogProductPage() {
         {!p.is_active && <p className="mb-4 border-l-2 border-red-700 bg-red-50 px-3 py-2 text-sm text-red-800">此產品已不在 Google Sheets 中（停用於 {fmtTime(p.deactivated_at)}），僅供查閱歷史資料。</p>}
         {p.display_name && <p className="-mt-3 mb-5 text-[15px] text-ink/75">{p.display_name}</p>}
 
-        {p.image_urls.length > 0 && (
+        {images.length > 0 && (
           <div className="-mx-6 mb-6 flex snap-x gap-2 overflow-x-auto px-6" aria-label="產品圖片">
-            {p.image_urls.map((u) => (
-              <a key={u} href={u} target="_blank" rel="noreferrer" className="snap-start">
+            {images.map((u, i) => (
+              <button key={u} type="button" onClick={() => openViewer(i)} aria-label={`放大第 ${i + 1} 張圖片`} className="snap-start shrink-0">
                 <ProductImage url={u} className="h-56 w-56 shrink-0 border border-line" />
-              </a>
+              </button>
             ))}
           </div>
         )}
@@ -148,6 +154,14 @@ export function CatalogProductPage() {
           <div className="flex justify-between"><span>資料來源</span><span>Google Sheets「報價」第 {p.source_row ?? '—'} 列</span></div>
         </section>
       </main>
+      {viewerAt !== undefined && images[viewerAt] && (
+        <ImageViewer
+          urls={images}
+          index={viewerAt}
+          onIndex={(i) => nav(loc.pathname, { state: { viewer: i }, replace: true })}
+          onClose={() => nav(-1)}
+        />
+      )}
     </div>
   )
 }
