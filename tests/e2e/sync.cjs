@@ -27,13 +27,14 @@ async function goHome(page) { await page.goto(URL); await page.getByRole('headin
 async function createSurvey(page, name, model) {
   await page.getByRole('button', { name: '新增場勘' }).click();
   await page.getByLabel('客戶姓名').fill(name);
+  await page.getByRole('button', { name: /電話、地址、日期、備註/ }).click();
   await page.getByLabel('產品型號').fill(model);
   await page.getByRole('button', { name: '建立場勘' }).click();
   await page.getByRole('heading', { name }).waitFor();
 }
 async function editModel(page, name, model) {
   await goHome(page); await page.getByText(name).first().click();
-  await page.getByRole('button', { name: '編輯場勘資料' }).click();
+  await page.getByRole('button', { name: '編輯', exact: true }).click();
   await page.getByLabel('產品型號').fill(model);
   await page.getByRole('button', { name: '儲存修改' }).click();
   await page.getByText(model).first().waitFor();
@@ -109,6 +110,7 @@ async function editModel(page, name, model) {
   await a1.ctx.setOffline(true);
   await a1.page.evaluate(() => window.dispatchEvent(new Event('offline')));
   await a1.page.getByText(name2).click();
+  await a1.page.getByRole('button', { name: '編輯', exact: true }).click();
   await a1.page.getByRole('button', { name: '刪除這筆場勘' }).click();
   await a1.page.getByRole('heading', { name: '場勘紀錄' }).waitFor();
   await a1.ctx.setOffline(false);

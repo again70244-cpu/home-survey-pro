@@ -60,6 +60,9 @@ async function device(browser, catalog) {
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
   const W = p.getByRole('region', { name: '洗衣機現場檢查' })
   check(await until(async () => (await W.getByTestId('washer-score').count()) === 1), '場勘頁出現「洗衣機現場檢查」')
+  // 有洗衣機的場勘不預先建立區域；這裡手動加陽台（舊資料相容：有陽台時當作安裝位置）與電梯
+  const more = p.getByRole('button', { name: /^產品與資料/ }); await more.click()
+  for (const n of ['陽台', '電梯']) { await p.getByRole('button', { name: '新增區域' }).click(); await p.getByRole('button', { name: n, exact: true }).click(); await p.getByRole('region', { name: '區域 ' + n }).waitFor() }
   check(await W.locator('[data-field]').count() === 0, '詳細欄位預設收起')
   await expand(W)
   check(await until(async () => (await W.locator('[data-finding="install:dims"]').count()) === 1), '陽台尚未量尺寸 → 必須人工確認')
@@ -91,12 +94,12 @@ async function device(browser, catalog) {
   check(await W.locator('[data-finding="fields:missing"]').count() === 0, '必要欄位都填寫後不再提示')
   const firstLevel = await W.locator('[data-finding]').first().getAttribute('data-level')
   check(firstLevel === 'high', '高風險排在最前面')
-  check((await W.locator('[data-count="high"]').innerText()) === '2', '統計：高風險 2 項')
+  check(await W.locator('[data-count]').count() === 0, '不重複顯示統計列（結論與燈號已足夠）')
   const light = (k) => W.locator(`[data-light="${k}"]`).getAttribute('data-state')
   check((await light('power')) === 'high' && (await light('door')) === 'high' && (await light('space')) === 'caution' && (await light('water')) === 'confirm', '燈號：電源、門片紅燈；空間橘燈；進水待確認')
   check((await W.getByTestId('washer-verdict').getAttribute('data-state')) === 'high', '一行結論顯示高風險')
   check(await W.locator('[data-bar="width_cm"][data-state="caution"]').count() === 1 && await W.locator('[data-bar="depth_cm"][data-state="ok"]').count() === 1, '空間比對圖：寬度不足（橘）、深度足夠')
-  check((await W.getByTestId('light-legend').innerText()).replace(/\s+/g, '') === '高風險注意待確認正常未填點選燈號查看說明', '燈號下方有圖例說明每種狀態')
+  check(await W.getByTestId('light-legend').count() === 0 && (await W.getByText('點選燈號查看說明').count()) === 1, '每格已寫狀態，不另放圖例，只留一行操作提示')
   check((await W.locator('[data-light="power"]').innerText()).includes('高風險') && (await W.locator('[data-bar="width_cm"]').innerText()).includes('預留不足') && (await W.locator('[data-bar="depth_cm"]').innerText()).includes('足夠'), '每格與每條比對都寫出狀態文字')
   check(!(await W.locator('[data-finding="outlet:len:WD-S13VDW"]').isVisible()), '未點選前不顯示文字說明')
   await W.locator('[data-light="power"]').click()
@@ -165,7 +168,7 @@ async function device(browser, catalog) {
 
   console.log('— 清理：刪除測試場勘（連同模板）')
   await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
-  await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
+  await p.getByRole('button', { name: '編輯', exact: true }).click(); await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
   const del = await p.evaluate((n) => new Promise((res) => { const r = indexedDB.open('home-survey-pro'); r.onsuccess = () => { const t = r.result.transaction(['surveys', 'survey_templates']); const s = t.objectStore('surveys').getAll(); const st = t.objectStore('survey_templates').getAll(); t.oncomplete = () => { const sv = s.result.find((x) => x.customer_name === n); res(st.result.filter((x) => x.survey_id === sv.id).map((x) => !!x.deleted_at)) } } }), name)
   check(del.length === 1 && del[0], '刪除場勘時模板一併軟刪除')
   await synced(p)

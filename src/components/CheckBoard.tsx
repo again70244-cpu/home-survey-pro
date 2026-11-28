@@ -105,11 +105,6 @@ export function CheckBoard({
         <span className={`h-3.5 w-3.5 shrink-0 rounded-full ${DOT[v.state]} ${v.state === 'high' ? 'hsp-breathe' : ''}`} aria-hidden />
         <span className={`flex-1 text-[16px] ${TEXT[v.state]}`}>{v.text}</span>
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 px-1 text-[13px] tabular-nums" aria-label="檢查結果統計">
-        <span className="text-[#ff8a8a]">高風險 <b className="font-medium" data-count="high">{result.counts.high}</b> 項</span>
-        <span className="text-[#f6c27a]">注意 <b className="font-medium" data-count="caution">{result.counts.caution}</b> 項</span>
-        <span className="text-[#c4b5fd]">待確認 <b className="font-medium" data-count="confirm">{result.counts.confirm}</b> 項</span>
-      </div>
 
       {/* 燈號格 */}
       <div className="mt-3 grid grid-cols-4 gap-2" role="tablist" aria-label="檢查類別">
@@ -136,16 +131,8 @@ export function CheckBoard({
         })}
       </div>
 
-      {/* 圖例：每種燈號代表的狀態 */}
-      <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5 text-[12px] text-sub" aria-label="燈號說明" data-testid="light-legend">
-        {(['high', 'caution', 'confirm', 'ok', 'todo'] as const).map((st) => (
-          <span key={st} className="flex items-center gap-1.5">
-            <span className={`h-2.5 w-2.5 rounded-full ${DOT[st]}`} aria-hidden />
-            {LIGHT_LABEL[st]}
-          </span>
-        ))}
-        <span className="w-full text-center text-[11px]">點選燈號查看說明</span>
-      </div>
+      {/* 每格已寫明狀態（高風險、待確認…），不另放圖例 */}
+      {!sel && <p className="mt-2 text-center text-[11px] text-sub">點選燈號查看說明</p>}
 
       {/* 選取類別的說明（全部結果都在結構中，依等級排序；只顯示選取的類別） */}
       <ul key={sel ?? 'none'} className={selected ? 'hsp-reveal mt-3 space-y-2' : 'hidden'} aria-label="檢查結果">

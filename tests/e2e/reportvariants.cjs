@@ -53,7 +53,7 @@ async function device(browser, catalog) {
 
   console.log('— 準備場勘資料')
   await p.getByRole('button', { name: '新增場勘' }).click()
-  await p.getByLabel('客戶姓名').fill(name); await p.getByLabel('聯絡電話').fill(PHONE); await p.getByLabel('客戶地址').fill(ADDR); await p.getByLabel('備註').fill(NOTE)
+  await p.getByLabel('客戶姓名').fill(name); await p.getByRole('button', { name: /電話、地址、日期、備註/ }).click(); await p.getByLabel('聯絡電話').fill(PHONE); await p.getByLabel('客戶地址').fill(ADDR); await p.getByLabel('備註').fill(NOTE)
   await p.getByRole('button', { name: /從 LG 產品知識庫選擇/ }).click()
   await p.getByLabel('搜尋要選擇的產品').fill('s13vdw'); await p.getByRole('button', { name: '選擇 WD-S13VDW' }).click()
   await p.getByRole('button', { name: '完成', exact: true }).click()
@@ -62,7 +62,11 @@ async function device(browser, catalog) {
   await until(async () => (await W.getByTestId('washer-score').count()) === 1)
   await expand(W)
   const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
-  await expandAreas()
+  // 有洗衣機時不預先建立區域：手動加陽台、電梯、樓梯（電梯、樓梯不量，驗證客戶版不放未測量區域）
+  await p.getByRole('button', { name: /^產品與資料/ }).click()
+  for (const n of ['陽台', '電梯', '樓梯']) { await p.getByRole('button', { name: '新增區域' }).click(); await p.getByRole('button', { name: n, exact: true }).click(); await p.getByRole('region', { name: '區域 ' + n }).waitFor() }
+  const AREA_NOTE = '陽台門檻內部備註XYZ'
+  await p.getByRole('region', { name: '區域 陽台' }).getByLabel('區域備註').fill(AREA_NOTE); await p.getByRole('region', { name: '區域 陽台' }).getByLabel('區域備註').blur()
   const dim = async (area, k, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth(k); await i.fill(String(v)); await i.blur() }
   await dim('陽台', 0, 62); await dim('陽台', 1, 80); await dim('陽台', 2, 200)
   const choose = async (f, v) => { await W.locator(`[data-field="${f}"][data-value="${v}"]`).click(); await p.waitForTimeout(150) }
@@ -89,7 +93,7 @@ async function device(browser, catalog) {
   check(!ins.text.includes('插座到機器位置的距離'), '不適用的欄位（沒有插座時的距離）不列出')
   check(ins.text.includes('拍攝清單（1 / 9）') && ins.text.includes('✓ 安裝空間正面') && ins.text.includes('未拍 插座'), '列出拍攝清單完成狀況')
   check(ins.text.includes('規則版本 washer v1') && ins.text.includes('依據：'), '保留規則版本與依據')
-  check(ins.text.includes(NOTE) && ins.text.includes('樓梯'), '保留整體備註與所有區域')
+  check(ins.text.includes(NOTE) && ins.text.includes('樓梯') && ins.text.includes(AREA_NOTE), '保留整體備註、區域備註與所有區域')
   const pos = (t) => ins.text.indexOf(t)
   check(pos('施工前待處理') < pos('洗衣機現場檢查') && pos('洗衣機現場檢查') < pos('洗衣機現場條件'), '順序：待處理 → 檢查結果 → 現場條件')
   check(!warns.some((w) => w.includes('[report]')), '施工版各頁沒有內容超出版面')
@@ -106,7 +110,7 @@ async function device(browser, catalog) {
   check(p.url().includes('v=customer'), '網址記住客戶版')
   check(cu.text.includes('家電場勘紀錄・客戶版') && !cu.text.includes('施工場勘單'), '封面與頁首標示客戶版')
   check(!cu.text.includes(PHONE) && !cu.text.includes(ADDR), '客戶版沒有電話與地址')
-  check(!cu.text.includes(NOTE), '客戶版沒有內部備註')
+  check(!cu.text.includes(NOTE) && !cu.text.includes(AREA_NOTE), '客戶版沒有內部備註與區域備註')
   check(cu.text.includes('洗衣機安裝評估') && cu.text.includes('有 1 個地方需要調整後才能安裝'), '結論：有 1 個地方需要調整')
   check(cu.text.includes('安裝前請先請水電師傅加裝插座') && cu.text.includes('地面不太平整') && cu.text.includes('安裝位置左右空間較緊'), '改寫成客戶看得懂的說明與建議')
   check(cu.text.includes('安裝人員會在安裝前與您確認'), '有待確認項目時，只說明會再確認')
@@ -136,7 +140,7 @@ async function device(browser, catalog) {
 
   console.log('— 清理：刪除測試場勘')
   await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
-  await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
+  await p.getByRole('button', { name: '編輯', exact: true }).click(); await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
   await synced(p)
   check(true, '已刪除測試場勘')
   console.log('\n結果：' + ok + ' 通過，' + bad + ' 失敗'); await browser.close(); process.exit(bad ? 1 : 0)

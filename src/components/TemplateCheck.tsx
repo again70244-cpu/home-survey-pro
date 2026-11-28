@@ -130,7 +130,8 @@ export function ResultSummary({ r }: { r: CheckResult }) {
 }
 
 /** 場勘頁的模板檢查區塊（洗衣機、冰箱…） */
-export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: string }) {
+/** show：active = 只顯示已啟用的檢查；inactive = 只顯示「啟用」按鈕（收在產品與資料裡） */
+export function TemplateCheck({ def, surveyId, show }: { def: TemplateDef; surveyId: string; show: 'active' | 'inactive' }) {
   const toast = useToast()
   // 模板資料列 ID 需用 crypto 計算，先算好再交給 liveQuery（liveQuery 內只放 Dexie 查詢）
   const [tplId, setTplId] = useState<string | null>(null)
@@ -141,13 +142,13 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
   const [busy, setBusy] = useState(false)
   // 詳細欄位與拍攝清單預設收起（現場請用「現場拍攝」一步一步填）
   const [expanded, setExpanded] = useState(false)
-  if (!data) return null
+  if (!data || data.active !== (show === 'active')) return null
   const save = (patch: Parameters<typeof saveTemplate>[3]) =>
     saveTemplate(surveyId, def.id, def.version, patch).catch((e) => toast(`儲存失敗：${e instanceof Error ? e.message : e}`))
 
   if (!data.active)
     return (
-      <section className="my-3 px-1" aria-label={def.title}>
+      <section className="mt-3" aria-label={def.title}>
         <button className="glass inline-flex h-10 items-center justify-center rounded-full px-4 text-[13px] text-ink" onClick={() => void save({})}>
           {def.enableLabel}
         </button>
@@ -182,7 +183,8 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
     <section className="glass-card my-3 p-5" aria-label={def.title}>
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">{def.title}</h2>
-        <span className="text-[13px] tabular-nums text-ink" data-testid={`${def.id}-score`}>完成度 {r!.score.percent}%</span>
+        {/* 完成度只給測試與報告用；畫面上的進度以「現場拍攝」為準，避免兩種數字 */}
+        <span className="sr-only" data-testid={`${def.id}-score`}>完成度 {r!.score.percent}%</span>
       </div>
       {!data.hasProduct && <p className="mt-2 text-xs text-sub">{def.noProductHint}</p>}
 
@@ -298,11 +300,11 @@ export function TemplateCheck({ def, surveyId }: { def: TemplateDef; surveyId: s
 }
 
 /** 場勘頁所有模板檢查（洗衣機、冰箱…） */
-export function TemplateChecks({ surveyId }: { surveyId: string }) {
+export function TemplateChecks({ surveyId, show }: { surveyId: string; show: 'active' | 'inactive' }) {
   return (
     <>
       {TEMPLATES.map((d) => (
-        <TemplateCheck key={d.id} def={d} surveyId={surveyId} />
+        <TemplateCheck key={d.id} def={d} surveyId={surveyId} show={show} />
       ))}
     </>
   )

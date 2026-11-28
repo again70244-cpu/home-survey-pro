@@ -59,17 +59,17 @@ export function CompletenessCard({ sum }: { sum: SurveySummary }) {
           )}
         </div>
       )}
-      {sum.unsynced && <p className="mt-2 text-sm text-oak">— 有資料尚未同步到雲端</p>}
     </section>
   )
 }
 
-function AddAreaSheet({ surveyId, onClose }: { surveyId: string; onClose: () => void }) {
+function AddAreaSheet({ surveyId, onClose, onAdded }: { surveyId: string; onClose: () => void; onAdded: (id: string) => void }) {
   const toast = useToast()
   const [custom, setCustom] = useState('')
   async function add(kind: AreaKind, name: string) {
     const id = await addArea(surveyId, kind, name)
     toast(`已新增「${name}」`)
+    onAdded(id) // 清單模式下直接展開新區域
     onClose()
     // 新區域出現在列表最後，捲動過去並聚焦寬度欄位
     const started = Date.now()
@@ -117,7 +117,7 @@ function AddAreaSheet({ surveyId, onClose }: { surveyId: string; onClose: () => 
 }
 
 /** 這筆場勘是否有現場拍攝（選了洗衣機／冰箱等有模板的產品，或已啟用模板） */
-function useHasFieldMode(surveyId: string) {
+export function useHasFieldMode(surveyId: string) {
   return useLiveQuery(async () => {
     const [products, templates] = await Promise.all([
       db.survey_products.where('survey_id').equals(surveyId).toArray(),
@@ -185,7 +185,7 @@ export function AreaList({ surveyId, sum }: { surveyId: string; sum: SurveySumma
           {list.length === 0 && <p className="py-8 text-center text-sm text-sub">還沒有區域</p>}
         </>
       )}
-      {fieldMode && !sorting && (
+      {fieldMode && !sorting && list.length > 0 && (
         <button type="button" onClick={() => setShowAll((v) => !v)} className="glass mt-2 flex h-11 w-full items-center justify-center rounded-full text-[14px] text-ink">
           {showAll ? '收合成清單' : '展開全部區域'}
         </button>
@@ -193,7 +193,7 @@ export function AreaList({ surveyId, sum }: { surveyId: string; sum: SurveySumma
       <Button variant="secondary" className="mt-3 w-full" onClick={() => setAdding(true)}>
         {Icon.plus} 新增區域
       </Button>
-      {adding && <AddAreaSheet surveyId={surveyId} onClose={() => setAdding(false)} />}
+      {adding && <AddAreaSheet surveyId={surveyId} onClose={() => setAdding(false)} onAdded={(id) => setOpen((x) => new Set(x).add(id))} />}
     </div>
   )
 }

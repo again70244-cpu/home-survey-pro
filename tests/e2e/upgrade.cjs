@@ -18,7 +18,7 @@ const serve = (dir) => {
   // 舊版：離線建立一筆（只存在本機、尚未同步），確保升級後本機獨有資料也保留
   await ctx.setOffline(true); await p.evaluate(() => window.dispatchEvent(new Event('offline')));
   const name = '升級測試-' + Date.now().toString().slice(-5);
-  await p.getByRole('button', { name: '新增場勘' }).click(); await p.getByLabel('客戶姓名').fill(name); await p.getByLabel('產品型號').fill('WD-S2220B');
+  await p.getByRole('button', { name: '新增場勘' }).click(); await p.getByLabel('客戶姓名').fill(name); { const m = p.getByRole('button', { name: /電話、地址、日期、備註/ }); if (await m.count()) await m.click(); } await p.getByLabel('產品型號').fill('WD-S2220B');
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor();
   await p.getByLabel('陽台 寬（公分）').fill('120'); await p.getByLabel('陽台 寬（公分）').blur(); await p.waitForTimeout(800);
   await p.getByRole('region', { name: '區域 陽台' }).getByTestId('gallery-input').setInputFiles(S + '/photos/p1.jpg');

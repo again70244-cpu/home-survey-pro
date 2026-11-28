@@ -1,33 +1,30 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { deleteSurvey } from '../db/repo'
 import { useUserId } from '../auth/AuthProvider'
-import { formatDate } from '../lib/format'
 import { surveySummary } from '../lib/completeness'
-import { AreaList, CompletenessCard } from '../components/AreaList'
+import { AreaList, CompletenessCard, useHasFieldMode } from '../components/AreaList'
 import { SurveyProducts } from '../components/SurveyProducts'
 import { TemplateChecks } from '../components/TemplateCheck'
 import { FieldCards } from '../components/FieldCard'
-import { BottomBar, Button, Card, Icon, IconButton, PageTitle, SectionLabel, TextButton, TopBar } from '../components/ui'
-import { RowSync } from '../components/SyncBadge'
+import { BottomBar, Button, Icon, IconButton, PageTitle, TextButton, TopBar } from '../components/ui'
 import { SyncStatusBar } from '../components/SyncStatusBar'
-import { useToast } from '../components/Toast'
 
-function Row({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="flex gap-4 border-b border-line py-3">
-      <dt className="w-20 shrink-0 text-[13px] text-sub">{label}</dt>
-      <dd className={`flex-1 whitespace-pre-wrap break-words text-[15px] ${value ? 'text-ink' : 'text-ink/40'}`}>{value || '未填寫'}</dd>
-    </div>
-  )
+/** 「產品與資料」展開狀態：同一筆場勘在這次開啟 App 期間記住 */
+function useMoreOpen(id: string) {
+  const key = `hsp-more-${id}`
+  const [open, setOpen] = useState(() => { try { return sessionStorage.getItem(key) === '1' } catch { return false } })
+  const set = (v: boolean) => { setOpen(v); try { sessionStorage.setItem(key, v ? '1' : '0') } catch { /* 無法儲存時只影響記憶 */ } }
+  return [open, set] as const
 }
 
 export function SurveyDetailPage() {
   const { id } = useParams()
   const userId = useUserId()
   const nav = useNavigate()
-  const toast = useToast()
+  const fieldMode = useHasFieldMode(id!)
+  const [more, setMore] = useMoreOpen(id!)
 
   const data = useLiveQuery(async () => {
     const survey = await db.surveys.get(id!)
@@ -39,7 +36,8 @@ export function SurveyDetailPage() {
       (c) => c.rowId === survey.id || c.local.survey_id === survey.id,
     )
     const photos = await db.survey_photos.where('survey_id').equals(id!).toArray()
-    return { survey, areas, conflict, sum: surveySummary(areas, photos, !!survey._dirty) }
+    const products = (await db.survey_products.where('survey_id').equals(id!).toArray()).filter((p) => !p.deleted_at)
+    return { survey, areas, conflict, products, sum: surveySummary(areas, photos, !!survey._dirty) }
   }, [id, userId])
 
   if (data === undefined) return null
@@ -51,14 +49,7 @@ export function SurveyDetailPage() {
       </div>
     )
 
-  const { survey: s, conflict, sum } = data
-
-  async function onDelete() {
-    if (!confirm(`確定要刪除「${s.customer_name}」的場勘紀錄？\n所有區域與照片都會一起刪除，其他裝置同步後也會刪除。`)) return
-    await deleteSurvey(s.id)
-    toast('已刪除')
-    nav('/', { replace: true })
-  }
+  const { survey: s, conflict, sum, products } = data
 
   const d = s.survey_date ? s.survey_date.slice(5).replace('-', '.') : ''
   return (
@@ -74,7 +65,8 @@ export function SurveyDetailPage() {
           meta={
             <>
               <span>{s.product_model || '未填型號'}</span>
-              <span>{sum.completeAreas} / {sum.areas.length} 區完成</span>
+              {s.customer_phone && <a href={`tel:${s.customer_phone.replace(/[^\d+]/g, '')}`} className="text-accent underline-offset-4 active:underline" aria-label={`撥打 ${s.customer_phone}`}>📞 {s.customer_phone}</a>}
+              {s.customer_address && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.customer_address)}`} target="_blank" rel="noreferrer" className="min-w-0 truncate text-accent underline-offset-4 active:underline" aria-label={`地圖 ${s.customer_address}`}>📍 {s.customer_address}</a>}
               <SyncStatusBar compact />
             </>
           }
@@ -82,31 +74,45 @@ export function SurveyDetailPage() {
         <div className="space-y-2 pb-4">
           <SyncStatusBar alertsOnly />
           {conflict && <p className="text-sm text-red-700">此場勘有版本衝突待處理</p>}
+          {s.notes && <p className="whitespace-pre-wrap break-words text-[14px] text-ink/75" aria-label="場勘備註">{s.notes}</p>}
         </div>
-        <FieldCards surveyId={s.id} />
-        <CompletenessCard sum={sum} />
-        <SurveyProducts surveyId={s.id} />
-        <TemplateChecks surveyId={s.id} />
-        <AreaList surveyId={s.id} sum={sum} />
-        <Card className="mt-6">
-          <SectionLabel right={<RowSync row={s} hasConflict={conflict} />}>場勘資料</SectionLabel>
-          <dl className="border-t border-ink">
-            <Row label="客戶姓名" value={s.customer_name} />
-            <Row label="聯絡電話" value={s.customer_phone} />
-            <Row label="場勘日期" value={formatDate(s.survey_date)} />
-            <Row label="客戶地址" value={s.customer_address} />
-            <Row label="產品型號" value={s.product_model} />
-            <Row label="備註" value={s.notes} />
-          </dl>
-          <Link to={`/survey/${s.id}/edit`} className="mt-4 block">
-            <Button variant="secondary" className="w-full">編輯場勘資料</Button>
-          </Link>
-        </Card>
-        <div className="pb-8">
-          <button onClick={onDelete} className="glass h-12 w-full rounded-full text-sm text-red-700">
-            刪除這筆場勘
-          </button>
-        </div>
+        {fieldMode ? (
+          <>
+            <FieldCards surveyId={s.id} />
+            <TemplateChecks surveyId={s.id} show="active" />
+            {/* 不常用的：產品規格、區域列表、其他檢查 → 收在一起 */}
+            <section className="glass-card my-3" aria-label="產品與資料">
+              <button
+                type="button"
+                onClick={() => setMore(!more)}
+                aria-expanded={more}
+                className="flex w-full items-center gap-3 px-5 py-4 text-left"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] text-ink">產品與資料</span>
+                  <span className="mt-0.5 block truncate text-[13px] text-sub">
+                    {[products.map((p) => p.model_code).join('、') || '未選產品', `區域 ${sum.areas.length}`, `照片 ${sum.areas.reduce((n, a) => n + a.photos, 0)} 張`].join('・')}
+                  </span>
+                </span>
+                <span className={`shrink-0 text-sub transition duration-500 ${more ? 'rotate-90' : ''}`} aria-hidden>{Icon.chevron}</span>
+              </button>
+              {more && (
+                <div className="hsp-reveal border-t border-line px-5 pb-5 pt-3">
+                  <SurveyProducts surveyId={s.id} bare />
+                  <AreaList surveyId={s.id} sum={sum} />
+                  <TemplateChecks surveyId={s.id} show="inactive" />
+                </div>
+              )}
+            </section>
+          </>
+        ) : (
+          <>
+            <CompletenessCard sum={sum} />
+            <SurveyProducts surveyId={s.id} />
+            <AreaList surveyId={s.id} sum={sum} />
+            <TemplateChecks surveyId={s.id} show="inactive" />
+          </>
+        )}
       </main>
       <BottomBar>
         <Button className="h-14 w-full" onClick={() => nav(`/survey/${s.id}/report`)}>

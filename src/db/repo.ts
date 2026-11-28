@@ -64,7 +64,11 @@ function newArea(userId: string, surveyId: string, kind: AreaKind, name: string,
 }
 
 /** 新增場勘（含預設區域）。回傳新 ID。資料寫入 IndexedDB 成功才 resolve */
-export async function createSurvey(userId: string, input: SurveyInput): Promise<string> {
+/**
+ * defaultAreas：有現場拍攝（洗衣機、冰箱）的場勘不預先建立陽台／電梯／樓梯，
+ * 由現場拍攝依需要建立，避免空白區域與「預設裝在陽台」
+ */
+export async function createSurvey(userId: string, input: SurveyInput, opts: { defaultAreas?: boolean } = {}): Promise<string> {
   const id = uuid()
   const t = nowIso()
   const survey: Survey = {
@@ -78,7 +82,7 @@ export async function createSurvey(userId: string, input: SurveyInput): Promise<
     _dirty: 1,
     _baseRevision: 0,
   }
-  const areas = DEFAULT_AREAS.map((a, i) => newArea(userId, id, a.kind, a.name, i))
+  const areas = opts.defaultAreas === false ? [] : DEFAULT_AREAS.map((a, i) => newArea(userId, id, a.kind, a.name, i))
   await db.transaction('rw', db.surveys, db.survey_areas, db.outbox, async () => {
     await db.surveys.add(survey)
     await enqueue('surveys', id, userId)

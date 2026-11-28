@@ -132,3 +132,15 @@ describe('冰箱規則', () => {
     expect(JSON.stringify(checkFridge(i))).toBe(JSON.stringify(checkFridge(i)))
   })
 })
+
+describe('洗衣機與冰箱安裝位置不互相搶用', () => {
+  it('同一筆場勘同時有「洗衣機安裝位置」與「冰箱安裝位置」時各自選對', async () => {
+    const { pickInstallArea } = await import('../../src/rules/washer')
+    const w = area('洗衣機安裝位置', 'other', 60, 60, 85)
+    const f = area('冰箱安裝位置', 'other', 90, 70, 180)
+    expect(pickFridgeArea([w, f], null)?.name).toBe('冰箱安裝位置')
+    expect(pickInstallArea([f, w], null)?.name).toBe('洗衣機安裝位置')
+    expect(pickFridgeArea([w], null)).toBeNull()
+    expect(pickInstallArea([f], null)).toBeNull()
+  })
+})

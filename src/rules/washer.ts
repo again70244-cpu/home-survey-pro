@@ -18,14 +18,14 @@ const RV = `規則 washer v${WASHER_RULES_VERSION}`
 export type { TemplateValues } from './common'
 export type WasherInput = RuleInput
 
-/** 安裝位置：使用者指定 → 名稱含「安裝位置」→ 陽台 */
+/** 安裝位置：使用者指定 → 名稱含「安裝位置」（冰箱的除外）→ 陽台（舊資料相容） */
 export function pickInstallArea(areas: SurveyArea[], installAreaId: string | null): SurveyArea | null {
   const live = areas.filter((a) => !a.deleted_at)
   if (installAreaId) {
     const a = live.find((x) => x.id === installAreaId)
     if (a) return a
   }
-  return live.find((a) => a.name.includes('安裝位置')) ?? live.find((a) => a.kind === 'balcony') ?? null
+  return live.find((a) => a.name.includes('安裝位置') && !a.name.includes('冰箱')) ?? live.find((a) => a.kind === 'balcony') ?? null
 }
 
 /** 適用此模板的產品（依分類） */

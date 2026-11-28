@@ -162,7 +162,8 @@ function ProductCard({ sp }: { sp: SurveyProduct }) {
 }
 
 /** 場勘頁的「安裝產品」區塊 */
-export function SurveyProducts({ surveyId }: { surveyId: string }) {
+/** bare：放在「產品與資料」裡時不再套一層卡片 */
+export function SurveyProducts({ surveyId, bare = false }: { surveyId: string; bare?: boolean }) {
   const toast = useToast()
   const [picking, setPicking] = useState(false)
   const list = useLiveQuery(
@@ -170,7 +171,7 @@ export function SurveyProducts({ surveyId }: { surveyId: string }) {
     [surveyId],
   )
   return (
-    <section className="glass-card my-3 p-5" aria-label="安裝產品">
+    <section className={bare ? 'pb-2' : 'glass-card my-3 p-5'} aria-label="安裝產品">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium tracking-[0.18em] text-sub">安裝產品（{list?.length ?? 0}）</h2>
       </div>

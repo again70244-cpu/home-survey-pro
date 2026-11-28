@@ -4,6 +4,7 @@
  * 用法：node tests/e2e/products.cjs <工作資料夾>（需先產生 <工作資料夾>/p2/fixtures.json）
  */
 const { chromium, devices } = require('playwright'); const fs = require('fs'); const path = require('path')
+const openMore = async (pg) => { const b = pg.getByRole('button', { name: /^產品與資料/ }); await b.waitFor({ timeout: 15000 }).catch(() => {}); if ((await b.count()) && (await b.getAttribute('aria-expanded')) !== 'true') await b.click() }
 const S = process.argv[2]; const URL = 'http://localhost:4174/'
 const FX = JSON.parse(fs.readFileSync(S + '/p2/fixtures.json', 'utf8'))
 let ok = 0, bad = 0; const check = (c, m) => { c ? ok++ : bad++; console.log(c ? '✅' : '❌', m) }
@@ -64,9 +65,11 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   await p.getByRole('button', { name: '選擇 WT-SD250HB' }).click()
   await p.getByRole('button', { name: '完成', exact: true }).click()
   check((await p.getByLabel('已選擇的產品').innerText()).includes('WD-S2220B') && (await p.getByLabel('已選擇的產品').innerText()).includes('寬 70・高 189・深 83'), '表單中顯示已選產品與尺寸')
+  check(await p.getByLabel('產品型號').count() === 0, '新增時只顯示姓名與產品（其他欄位收起）')
+  await p.getByRole('button', { name: /電話、地址、日期、備註/ }).click()
   check(await p.getByLabel('產品型號').inputValue() === 'WD-S2220B', '自動帶入產品型號文字')
   await p.screenshot({ path: S + '/p3-1-form.png', fullPage: true })
-  await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
+  await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor(); await openMore(p)
   const sec = p.getByRole('region', { name: '安裝產品' })
   await sec.getByRole('listitem', { name: '安裝產品 WT-SD250HB' }).waitFor({ timeout: 15000 }).catch(() => {})
   check(await sec.getByRole('listitem', { name: '安裝產品 WD-S2220B' }).count() === 1 && await sec.getByRole('listitem', { name: '安裝產品 WT-SD250HB' }).count() === 1, '場勘頁顯示 2 個安裝產品')
@@ -90,7 +93,7 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
 
   console.log('— 另一台裝置同步看到快照')
   const b = await device(browser, catalog); const q = b.page
-  await synced(q); await q.getByText(name).first().click(); await q.getByRole('heading', { name }).waitFor()
+  await synced(q); await q.getByText(name).first().click(); await q.getByRole('heading', { name }).waitFor(); await openMore(q)
   const qs = q.getByRole('region', { name: '安裝產品' })
   await qs.getByRole('listitem', { name: '安裝產品 WD-S2220B' }).waitFor({ timeout: 20000 })
   check(await qs.getByRole('listitem').count() === 2 && /寬\s*70/.test(await qs.getByRole('listitem', { name: '安裝產品 WD-S2220B' }).innerText()), '第二台裝置看到 2 個產品與快照規格')
@@ -104,7 +107,7 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   await p.getByRole('button', { name: '重新整理' }).click(); await p.waitForTimeout(1500)
   await p.getByLabel('搜尋產品型號').fill('S2220B'); await p.getByText('WD-S2220B', { exact: true }).first().click()
   check(/寬\s*71/.test(await p.getByLabel('安裝資訊').innerText()), '產品知識庫已更新為寬 71')
-  await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
+  await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor(); await openMore(p)
   await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).waitFor({ timeout: 15000 })
   // 「產品資料已更新」提示要等本機產品知識庫載入後才出現，先等它再讀取
   await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).getByText(/產品資料已於/).waitFor({ timeout: 15000 }).catch(() => {})
@@ -116,7 +119,7 @@ const snapWidth = (p, name, model) => p.evaluate(([n, m]) => new Promise((res) =
   await p.goto(URL); await p.getByRole('button', { name: '新增場勘' }).click(); await p.getByLabel('客戶姓名').fill(name2)
   await p.getByRole('button', { name: /從 LG 產品知識庫選擇/ }).click(); await p.getByLabel('搜尋要選擇的產品').fill('s2220b')
   await p.getByRole('button', { name: '選擇 WD-S2220B' }).click(); await p.getByRole('button', { name: '完成', exact: true }).click()
-  await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name: name2 }).waitFor()
+  await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name: name2 }).waitFor(); await openMore(p)
   await p.getByRole('region', { name: '安裝產品' }).getByRole('listitem', { name: '安裝產品 WD-S2220B' }).waitFor({ timeout: 15000 })
   check(/寬\s*71/.test(await p.getByRole('region', { name: '安裝產品' }).innerText()), '新案件選擇同一產品 → 帶入新規格寬 71')
   await synced(p)

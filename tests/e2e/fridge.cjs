@@ -63,6 +63,8 @@ async function device(browser, catalog) {
   const F = p.getByRole('region', { name: '冰箱現場檢查' })
   check(await until(async () => (await F.getByTestId('fridge-score').count()) === 1), '場勘頁出現「冰箱現場檢查」')
   await expand(F)
+  await p.getByRole('button', { name: /^產品與資料/ }).click() // 其他檢查的啟用按鈕收在「產品與資料」
+  check(await until(async () => /區域 0/.test(await p.getByRole('button', { name: /^產品與資料/ }).innerText())), '有冰箱時不預先建立陽台／電梯／樓梯')
   check(await p.getByRole('region', { name: '洗衣機現場檢查' }).getByTestId('washer-score').count() === 0 && await p.getByRole('button', { name: '啟用洗衣機／洗衣塔現場檢查' }).count() === 1, '沒選洗衣機：洗衣機檢查只顯示啟用連結')
   check(await F.locator('[data-finding="install:none"][data-level="confirm"]').count() === 1, '不會預設用陽台當冰箱位置 → 必須人工確認')
 
@@ -152,7 +154,7 @@ async function device(browser, catalog) {
 
   console.log('— 清理：刪除測試場勘')
   await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
-  await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
+  await p.getByRole('button', { name: '編輯', exact: true }).click(); await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
   await synced(p)
   check(true, '已刪除測試場勘')
   console.log('\n結果：' + ok + ' 通過，' + bad + ' 失敗'); await browser.close(); process.exit(bad ? 1 : 0)

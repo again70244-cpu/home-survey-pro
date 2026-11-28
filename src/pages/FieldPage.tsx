@@ -91,6 +91,42 @@ function DimInput({ area, k, autoFocus }: { area: SurveyArea; k: DimKey; autoFoc
   )
 }
 
+/** 區域備註：平常只顯示「＋ 備註」，點開才輸入；離開欄位時儲存（和區域頁的備註是同一份） */
+function NoteField({ area }: { area: SurveyArea }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState(area.notes ?? '')
+  const editing = useRef(false)
+  useEffect(() => { if (!editing.current) setText(area.notes ?? '') }, [area.notes])
+  const commit = () => {
+    editing.current = false
+    const v = text.trim() === '' ? null : text.trim()
+    if (v !== (area.notes ?? null)) void updateArea(area.id, { notes: v })
+    setOpen(false) // 收起，有內容時顯示前兩行
+  }
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="mt-2 flex min-h-11 w-full items-center gap-1.5 text-left text-[14px] text-sub" aria-label={`${area.name} 備註`}>
+        {area.notes ? <span className="line-clamp-2 whitespace-pre-wrap text-ink/80">📝 {area.notes}</span> : <>{Icon.plus} 備註</>}
+      </button>
+    )
+  return (
+    <label className="hsp-reveal mt-2 block">
+      <span className="text-[13px] text-sub">備註（施工版報告會列出）</span>
+      <textarea
+        autoFocus
+        rows={3}
+        value={text}
+        aria-label={`${area.name} 備註內容`}
+        placeholder="例如：走道轉角約 60 公分，需拆箱"
+        onFocus={() => (editing.current = true)}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        className="hsp-focus mt-1 block w-full rounded-[18px] border-2 border-transparent bg-white/[0.05] px-3 py-2.5 text-[16px] text-ink placeholder:text-ink/30 focus:border-ink/80 focus:outline-none focus:ring-0"
+      />
+    </label>
+  )
+}
+
 function BigField({ f, value, onSave }: { f: TemplateField; value: unknown; onSave: (v: string | number | null) => void }) {
   const [text, setText] = useState(value == null ? '' : String(value))
   const editing = useRef(false)
@@ -414,6 +450,7 @@ export function FieldPage() {
                     <div className={`grid gap-2 ${dimKeys.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                       {dimKeys.map((k, i) => <DimInput key={`${target.id}-${k}`} area={target} k={k} autoFocus={i === 0 && target[k] == null} />)}
                     </div>
+                    <NoteField key={target.id} area={target} />
                   </>
                 ) : (
                   <button type="button" onClick={() => void createTarget()} className="glass-dark flex h-14 w-full items-center justify-center gap-2 rounded-full text-[16px]">

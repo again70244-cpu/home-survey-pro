@@ -59,6 +59,7 @@ async function device(browser, catalog) {
   await p.getByLabel('搜尋要選擇的產品').fill('lsu22'); await p.getByRole('button', { name: '選擇 ' + AC }).click()
   await p.getByRole('button', { name: '完成', exact: true }).click()
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor()
+  await p.getByRole('button', { name: /^產品與資料/ }).click() // 產品規格收在「產品與資料」
   const sel = (m) => p.getByLabel(`${m} 適用檢查`)
   const W = p.getByRole('region', { name: '洗衣機現場檢查' }), F = p.getByRole('region', { name: '冰箱現場檢查' })
   check(await until(async () => (await sel(WM).locator('option:checked').innerText()) === '自動（洗衣機）'), '洗衣機產品：自動對應洗衣機檢查')
@@ -91,7 +92,7 @@ async function device(browser, catalog) {
 
   console.log('— 修正值會改變檢查結果（洗衣機寬度）')
   const expandAreas = async () => { const b = p.getByRole('button', { name: '展開全部區域' }); await until(async () => (await b.count()) === 1, 10000); if (await b.count()) await b.click() }
-  await expandAreas()
+  await p.getByRole('button', { name: '新增區域' }).click(); await p.getByRole('button', { name: '陽台', exact: true }).click(); await p.getByRole('region', { name: '區域 陽台' }).waitFor()
   const dim = async (area, k, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth(k); await i.fill(String(v)); await i.blur() }
   await dim('陽台', 0, 66); await dim('陽台', 1, 80); await dim('陽台', 2, 200)
   check(await until(async () => (await W.locator('[data-finding="install:width"]').count()) === 0), '寬 66 ≥ 機身 60 + 4 → 不提醒')
@@ -143,7 +144,7 @@ async function device(browser, catalog) {
 
   console.log('— 清理：刪除測試場勘')
   await p.goto(URL); await p.getByText(name, { exact: true }).first().click(); await p.getByRole('heading', { name, exact: true }).waitFor()
-  await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
+  await p.getByRole('button', { name: '編輯', exact: true }).click(); await p.getByRole('button', { name: '刪除這筆場勘' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor()
   await synced(p)
   check(true, '已刪除測試場勘')
   console.log('\n結果：' + ok + ' 通過，' + bad + ' 失敗'); await browser.close(); process.exit(bad ? 1 : 0)

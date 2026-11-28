@@ -19,7 +19,7 @@ const seen = (p, t, n = 15000) => p.getByText(t).first().waitFor({ timeout: n })
   await p.getByRole('button', { name: '登入' }).click(); await p.getByRole('heading', { name: '場勘紀錄' }).waitFor({ timeout: 20000 });
   const name = '報告測試-黃大明-' + Date.now().toString().slice(-4);
   await p.getByRole('button', { name: '新增場勘' }).click();
-  await p.getByLabel('客戶姓名').fill(name); await p.getByLabel(/聯絡電話/).fill('0912-345-678');
+  await p.getByLabel('客戶姓名').fill(name); await p.getByRole('button', { name: /電話、地址、日期、備註/ }).click(); await p.getByLabel(/聯絡電話/).fill('0912-345-678');
   await p.getByLabel(/客戶地址/).fill('新北市板橋區文化路一段 188 巷 25 號 7 樓之 3'); await p.getByLabel('產品型號').fill('WD-S19VDW');
   await p.getByLabel('備註').fill('客戶希望週末安裝。舊機需回收，請安排搬運人員兩位。');
   await p.getByRole('button', { name: '建立場勘' }).click(); await p.getByRole('heading', { name }).waitFor();

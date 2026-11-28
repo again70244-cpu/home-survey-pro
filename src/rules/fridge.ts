@@ -26,7 +26,7 @@ export function pickFridgeArea(areas: SurveyArea[], installAreaId: string | null
     if (a) return a
   }
   for (const k of ['冰箱', '安裝位置', '廚房']) {
-    const a = live.find((x) => x.name.includes(k))
+    const a = live.find((x) => x.name.includes(k) && !x.name.includes('洗衣'))
     if (a) return a
   }
   return null

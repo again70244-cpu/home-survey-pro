@@ -57,6 +57,7 @@ export const WASHER: TemplateDef = {
   version: WASHER_TEMPLATE_VERSION,
   title: '洗衣機現場檢查',
   enableLabel: '啟用洗衣機／洗衣塔現場檢查',
+  installAreaName: '洗衣機安裝位置',
   noProductHint: '尚未選擇洗衣機產品，選擇後會自動比對規格。',
   note: `規則版本 washer v1・預留標準：左右各 2 cm、後方 10 cm`,
   sections: WASHER_SECTIONS,

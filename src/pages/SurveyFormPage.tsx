@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { db } from '../db/db'
-import { addSurveyProduct, createSurvey, emptySurveyInput, updateSurvey, type SurveyInput } from '../db/repo'
+import { addSurveyProduct, createSurvey, deleteSurvey, emptySurveyInput, updateSurvey, type SurveyInput } from '../db/repo'
+import { autoTemplate } from '../rules/common'
 import { ProductPicker } from '../components/ProductPicker'
 import type { CatalogProduct } from '../catalog/types'
 import { useUserId } from '../auth/AuthProvider'
@@ -21,6 +22,8 @@ export function SurveyFormPage() {
   const [picking, setPicking] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // 新增時：電話、地址、日期、型號、備註收起來，只留姓名與產品
+  const [more, setMore] = useState(!isNew)
 
   useEffect(() => {
     if (isNew) return
@@ -59,7 +62,9 @@ export function SurveyFormPage() {
         notes: blankToNull(form.notes ?? ''),
       }
       if (isNew) {
-        const newId = await createSurvey(userId, clean)
+        // 有洗衣機／冰箱等現場拍攝的產品：不預先建立陽台／電梯／樓梯，由現場拍攝依需要建立
+        const fieldMode = picked.some((p) => autoTemplate(p.category))
+        const newId = await createSurvey(userId, clean, { defaultAreas: !fieldMode })
         for (const p of picked) await addSurveyProduct(newId, p) // 選擇的產品：保存當下規格快照
         toast('已儲存到本機')
         nav(`/survey/${newId}`, { replace: true })
@@ -75,6 +80,14 @@ export function SurveyFormPage() {
     }
   }
 
+  async function onDelete() {
+    if (!form) return
+    if (!confirm(`確定要刪除「${form.customer_name}」的場勘紀錄？\n所有區域與照片都會一起刪除，其他裝置同步後也會刪除。`)) return
+    await deleteSurvey(id!)
+    toast('已刪除')
+    nav('/', { replace: true })
+  }
+
   return (
     <div className="min-h-dvh pb-28">
       <TopBar
@@ -86,26 +99,14 @@ export function SurveyFormPage() {
         <form id="survey-form" onSubmit={submit} className="mx-auto max-w-2xl px-6">
           <PageTitle eyebrow={isNew ? 'NEW SURVEY' : 'EDIT SURVEY'} title={isNew ? '新增場勘' : '編輯場勘'} />
           <section className="glass-card space-y-5 p-5">
-            <h2 className="text-xs font-medium tracking-[0.18em] text-sub">客戶資料</h2>
             <Field label="客戶姓名">
               <TextInput required value={form.customer_name} onChange={set('customer_name')} placeholder="例如：王小明" />
             </Field>
-            <Field label="聯絡電話" hint="選填">
-              <TextInput type="tel" inputMode="tel" value={form.customer_phone ?? ''} onChange={set('customer_phone')} />
-            </Field>
-            <Field label="場勘日期">
-              <TextInput type="date" value={form.survey_date ?? ''} onChange={set('survey_date')} />
-            </Field>
-            <Field label="客戶地址" hint="選填">
-              <TextInput value={form.customer_address ?? ''} onChange={set('customer_address')} />
-            </Field>
-          </section>
-          <section className="glass-card mt-3 space-y-5 p-5">
-            <h2 className="text-xs font-medium tracking-[0.18em] text-sub">預計安裝產品</h2>
             {isNew && (
               <div>
+                <div className="mb-2 text-[13px] text-ink">安裝產品</div>
                 {picked.length > 0 && (
-                  <ul className="mb-3 border-t border-ink" aria-label="已選擇的產品">
+                  <ul className="mb-3 border-t border-line" aria-label="已選擇的產品">
                     {picked.map((p) => (
                       <li key={p.id} className="flex items-center justify-between border-b border-line py-2.5">
                         <span className="min-w-0">
@@ -118,16 +119,38 @@ export function SurveyFormPage() {
                   </ul>
                 )}
                 <Button type="button" variant="secondary" className="w-full" onClick={() => setPicking(true)}>{Icon.plus} 從 LG 產品知識庫選擇</Button>
-                <p className="mt-1.5 text-xs text-sub">選擇後會自動帶入安裝規格並保存在這筆場勘中</p>
               </div>
             )}
-            <Field label="產品型號">
-              <TextInput value={form.product_model ?? ''} onChange={set('product_model')} placeholder="例如：WD-S19VDW" />
-            </Field>
-            <Field label="備註">
-              <TextArea value={form.notes ?? ''} onChange={set('notes')} />
-            </Field>
+            {!more && (
+              <button type="button" onClick={() => setMore(true)} className="flex h-11 w-full items-center gap-1.5 text-[14px] text-sub" aria-expanded={false}>
+                {Icon.plus} 電話、地址、日期、備註
+              </button>
+            )}
+            {more && (
+              <div className={`space-y-5 ${isNew ? 'hsp-reveal' : ''}`}>
+                <Field label="聯絡電話" hint="選填">
+                  <TextInput type="tel" inputMode="tel" value={form.customer_phone ?? ''} onChange={set('customer_phone')} />
+                </Field>
+                <Field label="客戶地址" hint="選填">
+                  <TextInput value={form.customer_address ?? ''} onChange={set('customer_address')} />
+                </Field>
+                <Field label="場勘日期">
+                  <TextInput type="date" value={form.survey_date ?? ''} onChange={set('survey_date')} />
+                </Field>
+                <Field label="產品型號" hint="型錄找不到時手動輸入">
+                  <TextInput value={form.product_model ?? ''} onChange={set('product_model')} placeholder="例如：WD-S19VDW" />
+                </Field>
+                <Field label="備註">
+                  <TextArea value={form.notes ?? ''} onChange={set('notes')} />
+                </Field>
+              </div>
+            )}
           </section>
+          {!isNew && (
+            <button type="button" onClick={() => void onDelete()} className="glass mt-8 h-12 w-full rounded-full text-sm text-red-700">
+              刪除這筆場勘
+            </button>
+          )}
           <ErrorBox>{error}</ErrorBox>
         </form>
       )}
