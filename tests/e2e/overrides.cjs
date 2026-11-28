@@ -125,7 +125,7 @@ async function device(browser, catalog) {
   check(ac && ac.template_type === 'fridge' && ac.spec_overrides?.fields?.width_cm === 83 && ac.spec_overrides?.note === '現場實測', '雲端保存手動修正與適用檢查')
   check(ac && ac.spec_snapshot.width_cm == null && wm && wm.spec_overrides == null && wm.template_type == null, '雲端規格快照保持原樣；清除後為空')
   const b = await device(browser, catalog); const q = b.page
-  await q.getByText(name, { exact: true }).first().click({ timeout: 30000 }); await q.getByRole('heading', { name, exact: true }).waitFor()
+  await q.getByText(name, { exact: true }).first().click({ timeout: 30000 }); await q.getByRole('heading', { name, exact: true }).waitFor(); await q.getByRole('button', { name: /^產品與資料/ }).click()
   check(await until(async () => (await q.getByRole('listitem', { name: `安裝產品 ${AC}` }).locator('[data-spec="width_cm"][data-manual="1"]').innerText().catch(() => '')).includes('83'), 30000), '另一台裝置看到手動修正')
   check(await until(async () => (await q.getByRole('region', { name: '冰箱現場檢查' }).getByTestId('fridge-score').count()) === 1, 30000), '另一台裝置也套用「冰箱」檢查')
   await b.ctx.close()

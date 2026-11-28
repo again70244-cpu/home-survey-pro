@@ -65,7 +65,7 @@ async function device(browser, catalog) {
   await expand(F)
   await p.getByRole('button', { name: /^產品與資料/ }).click() // 其他檢查的啟用按鈕收在「產品與資料」
   check(await until(async () => /區域 0/.test(await p.getByRole('button', { name: /^產品與資料/ }).innerText())), '有冰箱時不預先建立陽台／電梯／樓梯')
-  check(await p.getByRole('region', { name: '洗衣機現場檢查' }).getByTestId('washer-score').count() === 0 && await p.getByRole('button', { name: '啟用洗衣機／洗衣塔現場檢查' }).count() === 1, '沒選洗衣機：洗衣機檢查只顯示啟用連結')
+  check(await until(async () => (await p.getByRole('region', { name: '洗衣機現場檢查' }).getByTestId('washer-score').count()) === 0 && (await p.getByRole('button', { name: '啟用洗衣機／洗衣塔現場檢查' }).count()) === 1), '沒選洗衣機：洗衣機檢查只顯示啟用連結')
   check(await F.locator('[data-finding="install:none"][data-level="confirm"]').count() === 1, '不會預設用陽台當冰箱位置 → 必須人工確認')
 
   console.log('— 一鍵新增「冰箱安裝位置」')
@@ -79,6 +79,7 @@ async function device(browser, catalog) {
   console.log('— 填寫尺寸與條件')
   const dim = async (area, label, v) => { const i = p.getByRole('region', { name: `區域 ${area}` }).locator('input[data-dim]').nth({ 寬: 0, 深: 1, 高: 2 }[label]); await i.fill(String(v)); await i.blur() }
   await dim('冰箱安裝位置', '寬', 100); await dim('冰箱安裝位置', '深', 85); await dim('冰箱安裝位置', '高', 182)
+  await p.getByRole('button', { name: '新增區域' }).click(); await p.getByRole('button', { name: '電梯', exact: true }).click(); await p.getByRole('region', { name: '區域 電梯' }).waitFor()
   await dim('電梯', '寬', 100); await dim('電梯', '深', 150); await dim('電梯', '高', 170)
   const choose = async (f, v) => { await F.locator(`[data-field="${f}"][data-value="${v}"]`).click(); await p.waitForTimeout(150) }
   const type = async (f, v) => { const i = F.locator(`input[data-field="${f}"]`); await i.fill(String(v)); await i.blur(); await p.waitForTimeout(150) }
